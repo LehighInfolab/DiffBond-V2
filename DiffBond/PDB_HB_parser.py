@@ -52,8 +52,12 @@ def help():
 
 
 def read_file(file):
-    f = open(file, "r")
+    try:
+        f = open(file, "r")
+    except:
+        print("Could not read file: ", file)
     lines = f.readlines()
+    f.close()
     return lines
 
 
@@ -68,6 +72,7 @@ def get_PDB_header_length(file):
         if line[0:4] == "ATOM":
             return count
         count += 1
+    f.close()
 
 
 def read_PDB_lines(file):
@@ -79,6 +84,7 @@ def read_PDB_lines(file):
             break
         if line[0:4] == "ATOM":
             cleaned_lines.append(line)
+    f.close()
     return cleaned_lines
 
 
@@ -132,6 +138,7 @@ def write_PDB(output_name, append, atoms_list):
         )
 
         f.write(line)
+    f.close()
 
 
 def main():

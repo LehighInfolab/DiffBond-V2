@@ -139,9 +139,16 @@ def HB_processing(i_list, edges):
     PDB_HB_parser.write_PDB("temp.pdb", True, atoms2)
 
     ### This function runs hbondfinder - function imported from hbondfinder_utils.
-    hbondfinder_utils.run_hbondfinder("temp.pdb")
+    if hbondfinder_utils.run_hbondfinder("temp.pdb") == False:
+        os.remove("temp.pdb")
+        return
 
-    hb_file_name = i_list[0].split(".")[0] + i_list[1].split(".")[0] + ".txt"
+    hb_file_name = (
+        i_list[0].split(".")[-2].split("\\")[-1]
+        + i_list[1].split(".")[-2].split("\\")[-1]
+        + ".txt"
+    )
+    print("Writing HBonds in hbondfinder_data folder to: ", hb_file_name, "...")
 
     # If hbondfinder folder already contains a file with the same name, shutil.move will be unable to move the file and will not save your most recent run. Delete files and run again.
     try:
@@ -149,7 +156,7 @@ def HB_processing(i_list, edges):
         shutil.move("HBondFinder" + hb_file_name, "hbondfinder_data")
     except OSError as error:
         print(
-            "Was not able to move hbond file to hbond data folder. Check to see that hbond file does not already exist."
+            "Was not able to move HBondFinder file to hbond_data folder. Check to see that HBondFinder file does not already exist."
         )
         os.remove("HBondFinder" + hb_file_name)
 
@@ -158,7 +165,7 @@ def HB_processing(i_list, edges):
         shutil.move("hbonds" + hb_file_name, "hbondfinder_data")
     except OSError as error:
         print(
-            "Was not able to move hbond file to hbond data folder. Check to see that hbond file does not already exist."
+            "Was not able to move hbond file to hbond_data folder. Check to see that hbond file does not already exist."
         )
         os.remove("hbonds" + hb_file_name)
 
@@ -196,7 +203,6 @@ def visualize_graph(graph):
 
 # Util function just for reformatting edge format outputted by ionic bond and salt bridge edges so that they contain only [chain letter + AA number of donors, chain letter + AA number of acceptors, distance]
 def reformat_contact_ionic_for_graph(edges):
-    print(edges[0])
     new_edges = []
     for edge in edges:
         reformat_edge = [edge[0][4] + edge[0][5], edge[1][4] + edge[1][5], edge[2]]
@@ -245,7 +251,7 @@ def main():
         # Switch statement for all bond functions
         for m in mode:
             if m == "c":
-                "---Searching contacts within " + str(dist) + "...---"
+                print("##### Searching contacts within " + str(dist) + "... #####")
                 contact_edges = compareDist(PDB_data[0], PDB_data[1], dist)
                 print(
                     "--------------------------------------------------------------------------------------"
@@ -256,7 +262,7 @@ def main():
                 )
                 print(contact_edges)
             elif m == "i":
-                "---Searching ionic bonds...---"
+                print("##### Searching ionic bonds... #####")
                 ionic_edges = compareDistIonic(PDB_data[0], PDB_data[1], dist)
                 print(
                     "--------------------------------------------------------------------------------------"
@@ -267,9 +273,12 @@ def main():
                 )
                 print(ionic_edges)
             elif m == "h":
-                "---Searching h-bonds...---"
+                print("##### Searching h-bonds... #####")
                 edges_temp = compareDist(PDB_data[0], PDB_data[1], 3.5)
                 hb_file = HB_processing(i_list, edges_temp)
+                if hb_file == None:
+                    print("---No bonds in contact distance to run hbondfinder.---")
+                    break
                 hb_lines = PDB_HB_parser.parse_file(
                     "hbondfinder_data/" + hb_file, True, 1
                 )
@@ -287,13 +296,13 @@ def main():
         for m in mode:
             if m == "g":
                 if contact_edges == []:
-                    "---Searching contacts within " + str(dist) + "...---"
+                    print("##### Searching contacts within " + str(dist) + "... #####")
                     contact_edges = compareDist(PDB_data[0], PDB_data[1], dist)
                     reformatted_edges = reformat_contact_ionic_for_graph(contact_edges)
-                    ionic_graph = make_graph(reformatted_edges)
-                    visualize_graph(ionic_graph)
+                    contact_graph = make_graph(reformatted_edges)
+                    visualize_graph(contact_graph)
                 if ionic_edges == []:
-                    "---Searching ionic bonds...---"
+                    print("##### Searching ionic bonds... #####")
                     ionic_edges = compareDistIonic(PDB_data[0], PDB_data[1], dist)
                     reformatted_edges = reformat_contact_ionic_for_graph(ionic_edges)
                     print(reformatted_edges)
@@ -301,9 +310,12 @@ def main():
                     visualize_graph(ionic_graph)
 
                 if hbond_edges == []:
-                    "---Searching h-bonds...---"
+                    print("##### Searching h-bonds... #####")
                     edges_temp = compareDist(PDB_data[0], PDB_data[1], 3.5)
                     hb_file = HB_processing(i_list, edges_temp)
+                    if hb_file == None:
+                        print("---No bonds in contact distance to run hbondfinder.---")
+                        break
                     hb_lines = PDB_HB_parser.parse_file(
                         "hbondfinder_data/" + hb_file, True, 1
                     )

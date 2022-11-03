@@ -24,9 +24,14 @@ def read_and_parse_folder(dir):
 def run_hbondfinder(file):
     make_hbondfinder_dir()
     PDBcode = file.split(".")[0]
+
+    if os.path.getsize(file) == 0:
+        return False
+
     if os.path.exists("/hbondfinder/HBondFinder_" + PDBcode):
-        print("File already ran through HBondFinder.")
+        print("---File already ran through HBondFinder. ---")
     else:
+        print("Running hbondfinder.py ...")
         os.system(
             "python hbondfinder.py -i "
             + file
