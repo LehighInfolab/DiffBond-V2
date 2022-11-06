@@ -139,6 +139,7 @@ def HB_processing(i_list, edges):
     PDB_HB_parser.write_PDB("temp.pdb", True, atoms2)
 
     ### This function runs hbondfinder - function imported from hbondfinder_utils.
+    ### If function returns false, that means file is empty.
     if hbondfinder_utils.run_hbondfinder("temp.pdb") == False:
         os.remove("temp.pdb")
         return
@@ -148,6 +149,43 @@ def HB_processing(i_list, edges):
         + i_list[1].split(".")[-2].split("\\")[-1]
         + ".txt"
     )
+    print("Writing HBonds in hbondfinder_data folder to: ", hb_file_name, "...")
+
+    # If hbondfinder folder already contains a file with the same name, shutil.move will be unable to move the file and will not save your most recent run. Delete files and run again.
+    try:
+        os.rename("HBondFinder_temp.txt", "HBondFinder" + hb_file_name)
+        shutil.move("HBondFinder" + hb_file_name, "hbondfinder_data")
+    except OSError as error:
+        print(
+            "Was not able to move HBondFinder file to hbond_data folder. Check to see that HBondFinder file does not already exist."
+        )
+        os.remove("HBondFinder" + hb_file_name)
+
+    try:
+        os.rename("hbonds_temp.txt", "hbonds" + hb_file_name)
+        shutil.move("hbonds" + hb_file_name, "hbondfinder_data")
+    except OSError as error:
+        print(
+            "Was not able to move hbond file to hbond_data folder. Check to see that hbond file does not already exist."
+        )
+        os.remove("hbonds" + hb_file_name)
+
+    os.remove("temp.pdb")
+
+    return "HBondFinder" + hb_file_name
+
+
+def interchain_HB_processing(file):
+    try:
+        shutil.copyfile(file, "./temp.pdb")
+    except OSError as error:
+        print("Was not able to find " + file)
+        return
+    if hbondfinder_utils.run_hbondfinder("temp.pdb") == False:
+        os.remove("temp.pdb")
+        return
+
+    hb_file_name = file.split(".")[-2].split("\\")[-1] + ".txt"
     print("Writing HBonds in hbondfinder_data folder to: ", hb_file_name, "...")
 
     # If hbondfinder folder already contains a file with the same name, shutil.move will be unable to move the file and will not save your most recent run. Delete files and run again.
@@ -236,7 +274,28 @@ def main():
 
     # Different process for one input file given vs 2 input files given.
     if len(i_list) == 1:
-        print("1")
+        for m in mode:
+            if m == "c" or m == "i":
+                print(
+                    "---Cannot find intermolecular ionic bonds or contacts with only 1 input file--"
+                )
+            elif m == "h":
+                hb_file = interchain_HB_processing(i_list[0])
+                if hb_file == None:
+                    print("---No bonds in contact distance to run hbondfinder.---")
+                    break
+                hb_lines = PDB_HB_parser.parse_file(
+                    "hbondfinder_data/" + hb_file, True, 1
+                )
+                hbond_edges = hbondfinder_utils.parse_hbond_lines(hb_lines, True)
+                print(
+                    "--------------------------------------------------------------------------------------"
+                )
+                print("---H-BOND PREDICTIONS THAT MEET HBONDFINDER CRITERIA---")
+                print(
+                    "--------------------------------------------------------------------------------------"
+                )
+                print(hbond_edges)
     elif len(i_list) == 2:
         PDB_data = []
         for i in i_list:
