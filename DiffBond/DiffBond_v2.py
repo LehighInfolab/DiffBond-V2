@@ -6,6 +6,7 @@ import argparse
 import shutil
 
 import networkx as nx
+from networkx.algorithms import bipartite
 import matplotlib.pyplot as plt
 
 import PDBGreedySearch
@@ -153,7 +154,8 @@ def HB_processing(i_list, edges):
 
     # If hbondfinder folder already contains a file with the same name, shutil.move will be unable to move the file and will not save your most recent run. Delete files and run again.
     try:
-        os.rename("HBondFinder_temp.txt", "HBondFinder" + hb_file_name)
+        shutil.copyfile("HBondFinder_temp.txt", "HBondFinder" + hb_file_name)
+        # os.rename("HBondFinder_temp.txt", "HBondFinder" + hb_file_name)
         shutil.move("HBondFinder" + hb_file_name, "hbondfinder_data")
     except OSError as error:
         print(
@@ -162,7 +164,8 @@ def HB_processing(i_list, edges):
         os.remove("HBondFinder" + hb_file_name)
 
     try:
-        os.rename("hbonds_temp.txt", "hbonds" + hb_file_name)
+        shutil.copyfile("hbonds_temp.txt", "hbonds" + hb_file_name)
+        # os.rename("hbonds_temp.txt", "hbonds" + hb_file_name)
         shutil.move("hbonds" + hb_file_name, "hbondfinder_data")
     except OSError as error:
         print(
@@ -171,6 +174,13 @@ def HB_processing(i_list, edges):
         os.remove("hbonds" + hb_file_name)
 
     os.remove("temp.pdb")
+
+    try:
+        print("Clearing temp files... ")
+        os.remove("HBondFinder_temp.txt")
+        os.remove("hbonds_temp.txt")
+    except OSError as error:
+        print("Unable to find files to clear")
 
     return "HBondFinder" + hb_file_name
 
@@ -226,16 +236,33 @@ def removeDupe(output):
 
 def make_graph(edges):
     G = nx.Graph()
+
+    ## make sure all nodes on left side are from the same chain
+    left_chain = edges[0][0][0]
+    left_nodes = []
+    # right = []
+
     for edge in edges:
+        ## if the first node, edge[0], is not on the same chain as left_chain, then add the other node.
+        if edge[0][0] == left_chain:
+            left_nodes.append(edge[0])
+        else:
+            left_nodes.append(edge[1])
+
         G.add_edge(edge[0], edge[1], weight=edge[2])
     num_nodes = G.number_of_nodes()
     num_edges = G.number_of_edges()
-    return G
+
+    ## draw position of nodes on one side of interface separate from other side
+    pos = nx.drawing.layout.bipartite_layout(G, left_nodes)
+
+    return G, pos
 
 
-def visualize_graph(graph):
+def visualize_graph(graph, pos):
+    ## set up drawing of graphs
     plt.subplot(121)
-    nx.draw(graph, with_labels=True)
+    nx.draw(graph, with_labels=True, pos=pos)
     plt.show()
 
 
@@ -358,15 +385,15 @@ def main():
                     print("##### Searching contacts within " + str(dist) + "... #####")
                     contact_edges = compareDist(PDB_data[0], PDB_data[1], dist)
                     reformatted_edges = reformat_contact_ionic_for_graph(contact_edges)
-                    contact_graph = make_graph(reformatted_edges)
-                    visualize_graph(contact_graph)
+                    contact_graph, pos = make_graph(reformatted_edges)
+                    visualize_graph(contact_graph, pos)
                 if ionic_edges == []:
                     print("##### Searching ionic bonds... #####")
                     ionic_edges = compareDistIonic(PDB_data[0], PDB_data[1], dist)
                     reformatted_edges = reformat_contact_ionic_for_graph(ionic_edges)
                     print(reformatted_edges)
-                    ionic_graph = make_graph(reformatted_edges)
-                    visualize_graph(ionic_graph)
+                    ionic_graph, pos = make_graph(reformatted_edges)
+                    visualize_graph(ionic_graph, pos)
 
                 if hbond_edges == []:
                     print("##### Searching h-bonds... #####")
@@ -379,8 +406,8 @@ def main():
                         "hbondfinder_data/" + hb_file, True, 1
                     )
                     hbond_edges = hbondfinder_utils.parse_hbond_lines(hb_lines, True)
-                    hbond_graph = make_graph(hbond_edges)
-                    visualize_graph(hbond_graph)
+                    hbond_graph, pos = make_graph(hbond_edges)
+                    visualize_graph(hbond_graph, pos)
 
 
 if __name__ == "__main__":
