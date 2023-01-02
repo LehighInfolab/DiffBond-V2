@@ -1,0 +1,4 @@
+# ignore large folders for datasets and results
+Results/
+Dataset_1
+hbondfinder_data/

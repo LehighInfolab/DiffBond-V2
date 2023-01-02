@@ -141,6 +141,18 @@ def write_PDB(output_name, append, atoms_list):
     f.close()
 
 
+def split_PDB_chain(PDB_data):
+    chains = {}
+    for line in PDB_data:
+        chain = str(line[4])
+        if chain not in chains:
+            chains[chain] = []
+        else:
+            chains[chain].append(line)
+    print("All chains in PDB:", chains.keys())
+    return chains
+
+
 def main():
     # print(parse_file("hbondfinder_results/HBondFinder_1A4Y.txt"))
     # data = parse_file("Dataset/F_chain_only+h.pdb")

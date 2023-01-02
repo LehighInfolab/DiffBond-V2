@@ -4,6 +4,7 @@ import math
 import sys
 import argparse
 import shutil
+import itertools
 
 import networkx as nx
 from networkx.algorithms import bipartite
@@ -145,12 +146,20 @@ def HB_processing(i_list, edges):
         os.remove("temp.pdb")
         return
 
-    hb_file_name = (
-        i_list[0].split(".")[-2].split("\\")[-1]
-        + i_list[1].split(".")[-2].split("\\")[-1]
-        + ".txt"
+    try:
+        hb_file_name = (
+            i_list[0].split(".")[-2].split("\\")[-1]
+            + i_list[1].split(".")[-2].split("\\")[-1]
+            + ".txt"
+        )
+    except IndexError as error:
+        print(
+            "ERROR: Failed to process hydrogen bonds. Likely no hydrogens added to PDB."
+        )
+        return
+    print(
+        "RUNNING: Writing HBonds in hbondfinder_data folder to: ", hb_file_name, "..."
     )
-    print("Writing HBonds in hbondfinder_data folder to: ", hb_file_name, "...")
 
     # If hbondfinder folder already contains a file with the same name, shutil.move will be unable to move the file and will not save your most recent run. Delete files and run again.
     try:
@@ -159,7 +168,7 @@ def HB_processing(i_list, edges):
         shutil.move("HBondFinder" + hb_file_name, "hbondfinder_data")
     except OSError as error:
         print(
-            "Was not able to move HBondFinder file to hbond_data folder. Check to see that HBondFinder file does not already exist."
+            "ERROR: Was not able to move HBondFinder file to hbond_data folder. Check to see that HBondFinder file does not already exist."
         )
         os.remove("HBondFinder" + hb_file_name)
 
@@ -169,18 +178,18 @@ def HB_processing(i_list, edges):
         shutil.move("hbonds" + hb_file_name, "hbondfinder_data")
     except OSError as error:
         print(
-            "Was not able to move hbond file to hbond_data folder. Check to see that hbond file does not already exist."
+            "ERROR: Was not able to move hbond file to hbond_data folder. Check to see that hbond file does not already exist."
         )
         os.remove("hbonds" + hb_file_name)
 
     os.remove("temp.pdb")
 
     try:
-        print("Clearing temp files... ")
+        print("RUNNING: Clearing temp files... ")
         os.remove("HBondFinder_temp.txt")
         os.remove("hbonds_temp.txt")
     except OSError as error:
-        print("Unable to find files to clear")
+        print("ERROR: Unable to find files to clear")
 
     return "HBondFinder" + hb_file_name
 
@@ -189,14 +198,16 @@ def interchain_HB_processing(file):
     try:
         shutil.copyfile(file, "./temp.pdb")
     except OSError as error:
-        print("Was not able to find " + file)
+        print("ERROR: Was not able to find " + file)
         return
     if hbondfinder_utils.run_hbondfinder("temp.pdb") == False:
         os.remove("temp.pdb")
         return
 
     hb_file_name = file.split(".")[-2].split("\\")[-1] + ".txt"
-    print("Writing HBonds in hbondfinder_data folder to: ", hb_file_name, "...")
+    print(
+        "RUNNING: Writing HBonds in hbondfinder_data folder to: ", hb_file_name, "..."
+    )
 
     # If hbondfinder folder already contains a file with the same name, shutil.move will be unable to move the file and will not save your most recent run. Delete files and run again.
     try:
@@ -204,7 +215,7 @@ def interchain_HB_processing(file):
         shutil.move("HBondFinder" + hb_file_name, "hbondfinder_data")
     except OSError as error:
         print(
-            "Was not able to move HBondFinder file to hbond_data folder. Check to see that HBondFinder file does not already exist."
+            "ERROR: Was not able to move HBondFinder file to hbond_data folder. Check to see that HBondFinder file does not already exist."
         )
         os.remove("HBondFinder" + hb_file_name)
 
@@ -213,7 +224,7 @@ def interchain_HB_processing(file):
         shutil.move("hbonds" + hb_file_name, "hbondfinder_data")
     except OSError as error:
         print(
-            "Was not able to move hbond file to hbond_data folder. Check to see that hbond file does not already exist."
+            "ERROR: Was not able to move hbond file to hbond_data folder. Check to see that hbond file does not already exist."
         )
         os.remove("hbonds" + hb_file_name)
 
@@ -234,10 +245,25 @@ def removeDupe(output):
     return output
 
 
+# Util function to create a directory for the current protein results
+def make_results_dir(outputFileName):
+    print("RUNNING: Creating folder for collecting bond results...")
+    try:
+        os.mkdir("Results/" + outputFileName)
+        print("--- Successfully created folder ---")
+    except OSError as error:
+        print("ERROR: Directory already exists. Adding files to existing directory")
+    results_dir = "Results/" + outputFileName
+    return results_dir
+
+
+# Util function for making a networkx graph object from a list of edges. Automatically puts into bipartite format.
 def make_graph(edges):
     G = nx.Graph()
-
+    pos = []
     ## make sure all nodes on left side are from the same chain
+    if not edges:
+        return G, pos
     left_chain = edges[0][0][0]
     left_nodes = []
     # right = []
@@ -259,6 +285,7 @@ def make_graph(edges):
     return G, pos
 
 
+# Util function for visualizing graph
 def visualize_graph(graph, pos):
     ## set up drawing of graphs
     plt.subplot(121)
@@ -278,10 +305,7 @@ def reformat_contact_ionic_for_graph(edges):
 
 def main():
     i_list, mode, dist, outputFileName = parseArg()
-    # i_list = ["1brs_barnase_A+h.pdb", "1brs_barstar_D+h.pdb"]
-    # i_list = ["Dataset/F_chain_only+h.pdb", "Dataset/6cnk-F_chain+h.pdb"]
-    # i_list = ["../Dataset/6cnk-F_chain+h.pdb", "../Dataset/F_chain_only+h.pdb"]
-    # i_list = ["Dataset/F_chain_only+h.pdb", "Dataset/F_chain_only+h.pdb"]
+    # i_list = ["Dataset/1brs_barnase_A+h.pdb", "Dataset/1brs_barstar_D+h.pdb"]
     # mode = ["i", "h"]
     # dist = 4
     # outputFileName = None
@@ -293,36 +317,177 @@ def main():
 
     # Set output file name if no name was given in args
     if outputFileName == None:
-        outputFileName = "Test"
+        outputFileName = "Result"
         for i in i_list:
-            outputFileName = outputFileName + "_" + str(i.split(".")[0])
-        outputFileName = outputFileName + "_" + str(mode)
-        outputFileName = outputFileName + "_" + str(dist)
+            temp = str(i.split("\\")[-1])
+            outputFileName = outputFileName + "_" + str(temp.split(".")[-2])
+        outputFileName = outputFileName + "_" + str(dist) + "A"
+
+    use_visual = True
 
     # Different process for one input file given vs 2 input files given.
     if len(i_list) == 1:
-        for m in mode:
-            if m == "c" or m == "i":
-                print(
-                    "---Cannot find intermolecular ionic bonds or contacts with only 1 input file--"
-                )
-            elif m == "h":
-                hb_file = interchain_HB_processing(i_list[0])
-                if hb_file == None:
-                    print("---No bonds in contact distance to run hbondfinder.---")
-                    break
-                hb_lines = PDB_HB_parser.parse_file(
-                    "hbondfinder_data/" + hb_file, True, 1
-                )
-                hbond_edges = hbondfinder_utils.parse_hbond_lines(hb_lines, True)
-                print(
-                    "--------------------------------------------------------------------------------------"
-                )
-                print("---H-BOND PREDICTIONS THAT MEET HBONDFINDER CRITERIA---")
-                print(
-                    "--------------------------------------------------------------------------------------"
-                )
-                print(hbond_edges)
+        PDB_data = PDB_HB_parser.parse_PDB_file(i)
+        chains_data = PDB_HB_parser.split_PDB_chain(PDB_data)
+        chains_comb = list(itertools.combinations(list(chains_data.keys()), 2))
+        print(chains_comb)
+
+        # Create folder for results to be stored. If folder already exists, then skip.
+        print(
+            '--- Results will be printed to "',
+            outputFileName,
+            '" in Results folder ---',
+        )
+        results_dir = make_results_dir(outputFileName)
+
+        for c in chains_comb:
+            print("RUNNING: Working on the following combination of chains", c)
+            PDB_data = []
+            PDB_data.append(chains_data[c[0]])
+            PDB_data.append(chains_data[c[1]])
+
+            # "Cache" the edges if they have been calculated if a mode requires multiple different bonds to calculate eg. salt bridges, graphs
+            contact_edges = []
+            ionic_edges = []
+            hbond_edges = []
+
+            # Switch statement for all bond functions
+            for m in mode:
+                if m == "c":
+                    print("##### Searching contacts within " + str(dist) + "... #####")
+                    contact_edges = compareDist(PDB_data[0], PDB_data[1], dist)
+                    print(
+                        "--------------------------------------------------------------------------------------"
+                    )
+                    print("---CONTACT DISTANCE WITHIN " + str(dist) + " DISTANCE---")
+                    print(
+                        "--------------------------------------------------------------------------------------"
+                    )
+                    print(contact_edges)
+                elif m == "i":
+                    print("##### Searching ionic bonds... #####")
+                    ionic_edges = compareDistIonic(PDB_data[0], PDB_data[1], dist)
+                    print(
+                        "--------------------------------------------------------------------------------------"
+                    )
+                    print(
+                        "---IONIC BOND PREDICTIONS WITHIN " + str(dist) + " DISTANCE---"
+                    )
+                    print(
+                        "--------------------------------------------------------------------------------------"
+                    )
+                    print(ionic_edges)
+                elif m == "h":
+                    print("##### Searching h-bonds... #####")
+                    edges_temp = compareDist(PDB_data[0], PDB_data[1], 3.5)
+                    hb_file = HB_processing(i_list, edges_temp)
+                    if hb_file == None:
+                        print("ERROR: No bonds in contact distance to run hbondfinder.")
+                        break
+                    hb_lines = PDB_HB_parser.parse_file(
+                        "hbondfinder_data/" + hb_file, True, 1
+                    )
+                    hbond_edges = hbondfinder_utils.parse_hbond_lines(hb_lines, True)
+                    print(
+                        "--------------------------------------------------------------------------------------"
+                    )
+                    print("---H-BOND PREDICTIONS THAT MEET HBONDFINDER CRITERIA---")
+                    print(
+                        "--------------------------------------------------------------------------------------"
+                    )
+                    print(hbond_edges)
+
+            # For modes requiring multiple bonds calculated previously (eg. salt bridges, graphs), this switch statement calculates those
+            for m in mode:
+                if m == "g":
+                    if contact_edges == []:
+                        print(
+                            "##### Searching contacts within " + str(dist) + "... #####"
+                        )
+
+                        ## searching within distance for contacts
+                        contact_edges = compareDist(PDB_data[0], PDB_data[1], dist)
+                        reformatted_edges = reformat_contact_ionic_for_graph(
+                            contact_edges
+                        )
+
+                        ## making and visualizing graph
+                        contact_graph, pos = make_graph(reformatted_edges)
+                        if use_visual:
+                            visualize_graph(contact_graph, pos)
+
+                        ## writing graph to file
+                        nx.write_multiline_adjlist(
+                            contact_graph,
+                            results_dir
+                            + "/contacts"
+                            + "_"
+                            + c[0]
+                            + "_"
+                            + c[1]
+                            + ".adjlist",
+                        )
+                    if ionic_edges == []:
+                        print("##### Searching ionic bonds... #####")
+
+                        ## searching within distance for ionic bonds
+                        ionic_edges = compareDistIonic(PDB_data[0], PDB_data[1], dist)
+                        reformatted_edges = reformat_contact_ionic_for_graph(
+                            ionic_edges
+                        )
+                        print(reformatted_edges)
+
+                        ## making and visualizing graph
+                        ionic_graph, pos = make_graph(reformatted_edges)
+                        if use_visual:
+                            visualize_graph(ionic_graph, pos)
+
+                        ## writing graph to file
+                        nx.write_multiline_adjlist(
+                            ionic_graph,
+                            results_dir
+                            + "/ionic_bonds"
+                            + "_"
+                            + c[0]
+                            + "_"
+                            + c[1]
+                            + ".adjlist",
+                        )
+
+                    if hbond_edges == []:
+                        print("##### Searching h-bonds... #####")
+
+                        ## searching within distance for hbonds
+                        edges_temp = compareDist(PDB_data[0], PDB_data[1], 3.5)
+                        hb_file = HB_processing(i_list, edges_temp)
+                        if hb_file == None:
+                            print(
+                                "ERROR: No bonds in contact distance to run hbondfinder."
+                            )
+                            break
+                        hb_lines = PDB_HB_parser.parse_file(
+                            "hbondfinder_data/" + hb_file, True, 1
+                        )
+                        hbond_edges = hbondfinder_utils.parse_hbond_lines(
+                            hb_lines, True
+                        )
+
+                        ## making and visualizing graph
+                        hbond_graph, pos = make_graph(hbond_edges)
+                        if use_visual:
+                            visualize_graph(hbond_graph, pos)
+
+                        ## writing graph to file
+                        nx.write_multiline_adjlist(
+                            hbond_graph,
+                            results_dir
+                            + "/hbonds"
+                            + "_"
+                            + c[0]
+                            + "_"
+                            + c[1]
+                            + ".adjlist",
+                        )
     elif len(i_list) == 2:
         PDB_data = []
         for i in i_list:
@@ -333,6 +498,14 @@ def main():
         contact_edges = []
         ionic_edges = []
         hbond_edges = []
+
+        # Create folder for results to be stored. If folder already exists, then skip.
+        print(
+            '--- Results will be printed to "',
+            outputFileName,
+            '" in Results folder ---',
+        )
+        results_dir = make_results_dir(outputFileName)
 
         # Switch statement for all bond functions
         for m in mode:
@@ -363,7 +536,7 @@ def main():
                 edges_temp = compareDist(PDB_data[0], PDB_data[1], 3.5)
                 hb_file = HB_processing(i_list, edges_temp)
                 if hb_file == None:
-                    print("---No bonds in contact distance to run hbondfinder.---")
+                    print("ERROR: No bonds in contact distance to run hbondfinder.")
                     break
                 hb_lines = PDB_HB_parser.parse_file(
                     "hbondfinder_data/" + hb_file, True, 1
@@ -383,20 +556,42 @@ def main():
             if m == "g":
                 if contact_edges == []:
                     print("##### Searching contacts within " + str(dist) + "... #####")
+
+                    ## searching within distance for contacts
                     contact_edges = compareDist(PDB_data[0], PDB_data[1], dist)
                     reformatted_edges = reformat_contact_ionic_for_graph(contact_edges)
+
+                    ## making and visualizing graph
                     contact_graph, pos = make_graph(reformatted_edges)
-                    visualize_graph(contact_graph, pos)
+                    if use_visual:
+                        visualize_graph(contact_graph, pos)
+
+                    ## writing graph to file
+                    nx.write_multiline_adjlist(
+                        contact_graph, results_dir + "/contacts.adjlist"
+                    )
                 if ionic_edges == []:
                     print("##### Searching ionic bonds... #####")
+
+                    ## searching within distance for ionic bonds
                     ionic_edges = compareDistIonic(PDB_data[0], PDB_data[1], dist)
                     reformatted_edges = reformat_contact_ionic_for_graph(ionic_edges)
                     print(reformatted_edges)
+
+                    ## making and visualizing graph
                     ionic_graph, pos = make_graph(reformatted_edges)
-                    visualize_graph(ionic_graph, pos)
+                    if use_visual:
+                        visualize_graph(ionic_graph, pos)
+
+                    ## writing graph to file
+                    nx.write_multiline_adjlist(
+                        ionic_graph, results_dir + "/ionic_bonds.adjlist"
+                    )
 
                 if hbond_edges == []:
                     print("##### Searching h-bonds... #####")
+
+                    ## searching within distance for hbonds
                     edges_temp = compareDist(PDB_data[0], PDB_data[1], 3.5)
                     hb_file = HB_processing(i_list, edges_temp)
                     if hb_file == None:
@@ -406,8 +601,16 @@ def main():
                         "hbondfinder_data/" + hb_file, True, 1
                     )
                     hbond_edges = hbondfinder_utils.parse_hbond_lines(hb_lines, True)
+
+                    ## making and visualizing graph
                     hbond_graph, pos = make_graph(hbond_edges)
-                    visualize_graph(hbond_graph, pos)
+                    if use_visual:
+                        visualize_graph(hbond_graph, pos)
+
+                    ## writing graph to file
+                    nx.write_multiline_adjlist(
+                        hbond_graph, results_dir + "/hbonds.adjlist"
+                    )
 
 
 if __name__ == "__main__":
