@@ -5,8 +5,6 @@ import argparse
 import os
 import csv
 
-from click import open_file
-
 
 """
 Util file for parsing text files easily
