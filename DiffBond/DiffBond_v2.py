@@ -12,6 +12,7 @@ import networkx as nx
 from networkx.algorithms import bipartite
 import matplotlib.pyplot as plt
 
+sys.path.insert(1, "./lib")
 import PDBGreedySearch
 import PDB_HB_parser
 import hbondfinder_utils
@@ -476,7 +477,7 @@ def main():
                 temp = str(temp.split(s)[-1])
             outputFileName = outputFileName + "_" + str(temp.split(".")[-2])
 
-    use_visual = True
+    use_visual = False
 
     # Different process for one input file given vs 2 input files given.
     if len(i_list) == 1:
