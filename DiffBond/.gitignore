@@ -1,7 +1,8 @@
 # ignore large folders for datasets and results
+.gitignore
 Results/
 Dataset_1
 hbondfinder_data/
 skempi_toy
 figures/
-first_mut
+1brs_muts
