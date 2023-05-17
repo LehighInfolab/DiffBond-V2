@@ -39,16 +39,24 @@ def parseArg():
 
     parser.add_argument(
         "-i",
-        nargs=2,
-        required="True",
+        nargs="+",
+        required=True,
         metavar="InputPDB",
         help="Input PDB file to be compared. If only 1 file as input, then DiffBond will find bonds between all protein chains. If 2 files as input, then DiffBond will find bonds between the 2 PDB files.",
     )
     parser.add_argument("-o", nargs="?", metavar="OutputPDB", help="Output file name")
 
     parser.add_argument(
+        "-c",
+        nargs=2,
+        metavar="Chains",
+        help="If only one input file given, you can provide chains to calculate graph on only those 2 chains. Default = None, means calculate on all combination of chains.",
+    )
+
+    parser.add_argument(
         "-m",
         nargs="+",
+        required=True,
         metavar="mode",
         help="Search mode can be multiple combinations of the following options. Must include at least 1 option. Contact = c, Ionic bond = i, Hydrogen bond = h, Salt bridge = S, Cation pi = p",
     )
@@ -66,9 +74,10 @@ def parseArg():
     args = vars(args)
     i_list = args["i"]
     m_list = args["m"]
+    c_list = args["c"]
     d = args["d"]
     o = args["o"]
-    return i_list, m_list, d, o
+    return i_list, m_list, c_list, d, o
 
 
 # Checks a connected graph from all atoms in point1 to point2, where both point1 and point2 are lists of parsed values from a PDB file.
@@ -285,6 +294,17 @@ def make_pdb_dir(outputFileName):
     return pdb_dir
 
 
+def make_chain_comb_dir(outputFileName, chains):
+    print("RUNNING: Making new folder for each combination of chains...")
+    try:
+        os.mkdir("Results/" + outputFileName + "/" + chains[0] + "_" + chains[1])
+        print("--- Successfully created folder ---")
+    except OSError as error:
+        print("NOTE: Directory already exists. Adding files to existing directory")
+    chain_dir = "Results/" + outputFileName + "/" + chains[0] + "_" + chains[1]
+    return chain_dir
+
+
 # Holds code to run the contact mode
 def c_mode(PDB_data, dist, results_dir, use_visual):
     print("##### Searching contacts within " + str(dist) + "... #####")
@@ -479,24 +499,21 @@ def a_mode(PDB_data, dist, results_dir, use_visual):
 
 
 def s_mode(i_graph, h_graph, results_dir, use_visual):
-    print(i_graph)
-    print(h_graph)
 
+    if i_graph == None or h_graph == None:
+        return
     s_graph = nx.intersection(i_graph, h_graph)
     print(s_graph)
-    print(s_graph.edges)
 
     ## writing graph to file
     nx.write_multiline_adjlist(s_graph, results_dir + "/salt_bridges.adjlist")
     nx.write_gml(s_graph, results_dir + "/salt_bridges_bonds.gml")
 
+    return s_graph
+
 
 def main():
-    i_list, mode, dist, outputFileName = parseArg()
-    # i_list = ["Dataset/1brs_barnase_A+h.pdb", "Dataset/1brs_barstar_D+h.pdb"]
-    # mode = ["i", "h"]
-    # dist = 4
-    # outputFileName = None
+    i_list, mode, c_list, dist, outputFileName = parseArg()
 
     if dist == None:
         dist = 5.0
@@ -516,6 +533,8 @@ def main():
             outputFileName = outputFileName + "_" + str(dist)
 
     use_visual = False
+    PDB_data_list = []
+    chains_comb = []
 
     # Different process for one input file given vs 2 input files given.
     if len(i_list) == 1:
@@ -524,67 +543,20 @@ def main():
             if not PDB_data:
                 print("No data in PDB chain.")
             chains_data = PDB_HB_parser.split_PDB_chain(PDB_data)
-            chains_comb = list(itertools.combinations(list(chains_data.keys()), 2))
-            print(chains_comb)
-
-            # Create folder for results to be stored. If folder already exists, then skip.
-            print(
-                '--- Results will be printed to "',
-                outputFileName,
-                '" in Results folder ---',
-            )
-            results_dir = make_results_dir(outputFileName)
-
-            for c in chains_comb:
-                print("RUNNING: Working on the following combination of chains", c)
+            if c_list != None:
+                chains_comb.append(c_list)
                 PDB_data = []
-                PDB_data.append(chains_data[c[0]])
-                PDB_data.append(chains_data[c[1]])
+                PDB_data.append(chains_data[c_list[0]])
+                PDB_data.append(chains_data[c_list[1]])
+                PDB_data_list.append(PDB_data)
 
-                # "Cache" the edges if they have been calculated if a mode requires multiple different bonds to calculate eg. salt bridges, graphs
-                contact_edges = []
-                ionic_edges = []
-                hbond_edges = []
-
-                # Switch statement for all bond functions
-                for m in mode:
-                    if m == "c":
-                        c_mode(PDB_data, dist, results_dir, use_visual)
-
-                    elif m == "i":
-                        i_mode(PDB_data, dist, results_dir, use_visual)
-
-                    elif m == "h":
-                        h_mode(
-                            PDB_data,
-                            dist,
-                            results_dir,
-                            use_visual,
-                            i_list,
-                            outputFileName,
-                        )
-
-                    elif m == "a":
-                        a_mode(PDB_data, dist, results_dir, use_visual)
-
-                # For modes requiring multiple bonds calculated previously (eg. salt bridges, graphs), this switch statement calculates those
-                for m in mode:
-                    if m == "g":
-                        if contact_edges == []:
-                            c_mode(PDB_data, dist, results_dir, use_visual)
-
-                        if ionic_edges == []:
-                            i_mode(PDB_data, dist, results_dir, use_visual)
-
-                        if hbond_edges == []:
-                            h_mode(
-                                PDB_data,
-                                dist,
-                                results_dir,
-                                use_visual,
-                                i_list,
-                                outputFileName,
-                            )
+            else:
+                chains_comb = list(itertools.combinations(list(chains_data.keys()), 2))
+                for c in chains_comb:
+                    PDB_data = []
+                    PDB_data.append(chains_data[c[0]])
+                    PDB_data.append(chains_data[c[1]])
+                    PDB_data_list.append(PDB_data)
 
     elif len(i_list) == 2:
         PDB_data = []
@@ -594,23 +566,38 @@ def main():
                 print("No data found in PDB files.")
                 return
             PDB_data.append(data)
+        PDB_data_list.append(PDB_data)
+
+    # Create folder for results to be stored. If folder already exists, then skip.
+    print(
+        '--- Results will be printed to "',
+        outputFileName,
+        '" in Results folder ---',
+    )
+    root_results_dir = make_results_dir(outputFileName)
+    pdb_dir = make_pdb_dir(outputFileName)
+    for i in i_list:
+        shutil.copy(i, pdb_dir)
+
+    for i in range(len(PDB_data_list)):
+        results_dir = None
+        if len(i_list) == 2:
+            results_dir = root_results_dir
+        if len(i_list) == 1:
+            print(
+                "----------------- Computing for the following chains -----------------\n",
+                chains_comb[i],
+            )
+            if len(PDB_data_list) > 1:
+                chain_dir = make_chain_comb_dir(outputFileName, chains_comb[i])
+                results_dir = chain_dir
+            elif len(PDB_data_list) == 1:
+                results_dir = root_results_dir
 
         # "Cache" the edges if they have been calculated if a mode requires multiple different bonds to calculate eg. salt bridges, graphs
         contact_edges = []
         ionic_edges = []
         hbond_edges = []
-
-        # Create folder for results to be stored. If folder already exists, then skip.
-        print(
-            '--- Results will be printed to "',
-            outputFileName,
-            '" in Results folder ---',
-        )
-        results_dir = make_results_dir(outputFileName)
-        pdb_dir = make_pdb_dir(outputFileName)
-        print()
-        for i in i_list:
-            shutil.copy(i, pdb_dir)
 
         # Switch statement for all bond functions
         for m in mode:
@@ -618,27 +605,39 @@ def main():
             i_graph = None
             h_graph = None
             if m == "c":
-                c_mode(PDB_data, dist, results_dir, use_visual)
+                c_mode(PDB_data_list[i], dist, results_dir, use_visual)
 
             elif m == "i":
-                i_mode(PDB_data, dist, results_dir, use_visual)
+                i_mode(PDB_data_list[i], dist, results_dir, use_visual)
 
             elif m == "h":
-                h_mode(PDB_data, dist, results_dir, use_visual, i_list, outputFileName)
+                h_mode(
+                    PDB_data_list[i],
+                    dist,
+                    results_dir,
+                    use_visual,
+                    i_list,
+                    outputFileName,
+                )
 
             elif m == "a":
-                a_mode(PDB_data, dist, results_dir, use_visual)
+                a_mode(PDB_data_list[i], dist, results_dir, use_visual)
 
             elif m == "g":
                 if contact_edges == []:
-                    c_graph = c_mode(PDB_data, dist, results_dir, use_visual)
+                    c_graph = c_mode(PDB_data_list[i], dist, results_dir, use_visual)
 
                 if ionic_edges == []:
-                    i_graph = i_mode(PDB_data, dist, results_dir, use_visual)
+                    i_graph = i_mode(PDB_data_list[i], dist, results_dir, use_visual)
 
                 if hbond_edges == []:
                     h_graph = h_mode(
-                        PDB_data, dist, results_dir, use_visual, i_list, outputFileName
+                        PDB_data_list[i],
+                        dist,
+                        results_dir,
+                        use_visual,
+                        i_list,
+                        outputFileName,
                     )
 
                 s_mode(i_graph, h_graph, results_dir, use_visual)
