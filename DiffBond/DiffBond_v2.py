@@ -36,9 +36,11 @@ def parseArg():
     parser = argparse.ArgumentParser(
         description="Identify all points between protein structures or chains that are within a certain distance of each other."
     )
+
     parser.add_argument(
         "-i",
-        nargs="+",
+        nargs=2,
+        required="True",
         metavar="InputPDB",
         help="Input PDB file to be compared. If only 1 file as input, then DiffBond will find bonds between all protein chains. If 2 files as input, then DiffBond will find bonds between the 2 PDB files.",
     )
@@ -272,6 +274,17 @@ def make_results_dir(outputFileName):
     return results_dir
 
 
+def make_pdb_dir(outputFileName):
+    print("RUNNING: Duplicating PDB files to results folder...")
+    try:
+        os.mkdir("Results/" + outputFileName + "/pdb")
+        print("--- Successfully created folder ---")
+    except OSError as error:
+        print("NOTE: Directory already exists. Adding files to existing directory")
+    pdb_dir = "Results/" + outputFileName + "/pdb"
+    return pdb_dir
+
+
 # Holds code to run the contact mode
 def c_mode(PDB_data, dist, results_dir, use_visual):
     print("##### Searching contacts within " + str(dist) + "... #####")
@@ -298,6 +311,8 @@ def c_mode(PDB_data, dist, results_dir, use_visual):
     ## writing graph to file
     nx.write_multiline_adjlist(contact_graph, results_dir + "/contact_bonds.adjlist")
     nx.write_gml(contact_graph, results_dir + "/contact_bonds.gml")
+
+    return contact_graph
 
 
 # Holds code to run the ionic mode
@@ -327,6 +342,8 @@ def i_mode(PDB_data, dist, results_dir, use_visual):
     ## writing graph to file
     nx.write_multiline_adjlist(ionic_graph, results_dir + "/ionic_bonds.adjlist")
     nx.write_gml(ionic_graph, results_dir + "/ionic_bonds.gml")
+
+    return ionic_graph
 
 
 # Holds code to run the hbond mode
@@ -375,8 +392,10 @@ def h_mode(PDB_data, dist, results_dir, use_visual, i_list, outputFileName):
         )
 
     ## writing graph to file
-    nx.write_multiline_adjlist(hbond_graph, results_dir + "/hbond.adjlist")
-    nx.write_gml(hbond_graph, results_dir + "/hbond.gml")
+    nx.write_multiline_adjlist(hbond_graph, results_dir + "/hbonds.adjlist")
+    nx.write_gml(hbond_graph, results_dir + "/hbonds.gml")
+
+    return hbond_graph
 
 
 def compareDistAdj(contact, points1, points2, dist):
@@ -459,6 +478,19 @@ def a_mode(PDB_data, dist, results_dir, use_visual):
     nx.write_gml(adj_graph, results_dir + "/adj_bonds.gml")
 
 
+def s_mode(i_graph, h_graph, results_dir, use_visual):
+    print(i_graph)
+    print(h_graph)
+
+    s_graph = nx.intersection(i_graph, h_graph)
+    print(s_graph)
+    print(s_graph.edges)
+
+    ## writing graph to file
+    nx.write_multiline_adjlist(s_graph, results_dir + "/salt_bridges.adjlist")
+    nx.write_gml(s_graph, results_dir + "/salt_bridges_bonds.gml")
+
+
 def main():
     i_list, mode, dist, outputFileName = parseArg()
     # i_list = ["Dataset/1brs_barnase_A+h.pdb", "Dataset/1brs_barstar_D+h.pdb"]
@@ -480,6 +512,8 @@ def main():
             for s in special_characters:
                 temp = str(temp.split(s)[-1])
             outputFileName = outputFileName + "_" + str(temp.split(".")[-2])
+        if dist != 5.0:
+            outputFileName = outputFileName + "_" + str(dist)
 
     use_visual = False
 
@@ -573,9 +607,16 @@ def main():
             '" in Results folder ---',
         )
         results_dir = make_results_dir(outputFileName)
+        pdb_dir = make_pdb_dir(outputFileName)
+        print()
+        for i in i_list:
+            shutil.copy(i, pdb_dir)
 
         # Switch statement for all bond functions
         for m in mode:
+            c_graph = None
+            i_graph = None
+            h_graph = None
             if m == "c":
                 c_mode(PDB_data, dist, results_dir, use_visual)
 
@@ -588,19 +629,19 @@ def main():
             elif m == "a":
                 a_mode(PDB_data, dist, results_dir, use_visual)
 
-        # For modes requiring multiple bonds calculated previously (eg. salt bridges, graphs), this switch statement calculates those
-        for m in mode:
-            if m == "g":
+            elif m == "g":
                 if contact_edges == []:
-                    c_mode(PDB_data, dist, results_dir, use_visual)
+                    c_graph = c_mode(PDB_data, dist, results_dir, use_visual)
 
                 if ionic_edges == []:
-                    i_mode(PDB_data, dist, results_dir, use_visual)
+                    i_graph = i_mode(PDB_data, dist, results_dir, use_visual)
 
                 if hbond_edges == []:
-                    h_mode(
+                    h_graph = h_mode(
                         PDB_data, dist, results_dir, use_visual, i_list, outputFileName
                     )
+
+                s_mode(i_graph, h_graph, results_dir, use_visual)
 
                 ## making combined ionic and hbond graphs
                 # TODO: FIX THIS
