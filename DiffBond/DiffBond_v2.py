@@ -532,7 +532,7 @@ def main():
         if dist != 5.0:
             outputFileName = outputFileName + "_" + str(dist)
 
-    use_visual = True
+    use_visual = False
     PDB_data_list = []
     chains_comb = []
 
