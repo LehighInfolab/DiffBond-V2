@@ -135,6 +135,63 @@ def make_graph_hbond(edges):
 
 
 # Util function for making a networkx graph object from a list of edges. Automatically puts into bipartite format.
+def make_digraph_hbond(edges):
+
+    print(edges)
+
+    G = nx.DiGraph()
+    pos = nx.get_node_attributes(G, "pos")
+    color = nx.get_node_attributes(G, "color")
+
+    # if edges is empty, return
+    if not edges:
+        return G, pos
+
+    for edge in edges:
+        ## added edge labels here
+        G.add_edge(edge[0][1], edge[1][1], bond_type=edge[2][0], weight=edge[2][1])
+
+        ## adding node labels
+        G.nodes[edge[0][1]]["AA"] = edge[0][2]
+        G.nodes[edge[1][1]]["AA"] = edge[1][2]
+
+        G.nodes[edge[0][1]]["coord"] = edge[0][3]
+        G.nodes[edge[1][1]]["coord"] = edge[1][3]
+
+        G.nodes[edge[0][1]]["chain"] = edge[0][0]
+        G.nodes[edge[1][1]]["chain"] = edge[1][0]
+
+        ## if graph is for hbonds, add a donor acceptor node label
+        edge1_val = G.nodes[edge[0][1]].get("hbond")
+        edge2_val = G.nodes[edge[1][1]].get("hbond")
+        if edge1_val == None:
+            G.nodes[edge[0][1]]["hbond"] = edge[0][4]
+        if edge2_val == None:
+            G.nodes[edge[1][1]]["hbond"] = edge[0][4]
+        if edge1_val != None:
+            if edge1_val != edge[0][4]:
+                G.nodes[edge[0][1]]["hbond"] = ["donor", "acceptor"]
+        if edge2_val != None:
+            if edge2_val != edge[1][4]:
+                G.nodes[edge[1][1]]["hbond"] = ["donor", "acceptor"]
+
+        ## use atom positions for position in figures
+        pos[edge[0][1]] = np.array([edge[0][3][0], edge[0][3][1]])
+        pos[edge[1][1]] = np.array([edge[1][3][0], edge[1][3][1]])
+
+        ## use edge to indicate
+        color[edge[0][1]] = (0, 1, 1)
+        color[edge[1][1]] = (1, 0.3, 0.3)
+
+    num_nodes = G.number_of_nodes()
+    num_edges = G.number_of_edges()
+    ## draw position of nodes on one side of interface separate from other side
+    # pos = nx.drawing.layout.bipartite_layout(G, left_nodes)
+
+    return G, pos, color
+
+
+# Util function for making a networkx graph object from a list of edges. Automatically puts into bipartite format.
 def make_graph(edges):
     G = nx.Graph()
     pos = nx.get_node_attributes(G, "pos")
@@ -156,7 +213,6 @@ def make_graph(edges):
             temp = edge[0]
             edge[0] = edge[1]
             edge[1] = temp
-    
 
         ## added edge labels here
         G.add_edge(edge[0][1], edge[1][1], bond_type=edge[2][0], weight=edge[2][1])

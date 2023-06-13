@@ -404,7 +404,7 @@ def h_mode(PDB_data, dist, results_dir, use_visual, i_list, outputFileName):
     print(reformatted_edges)
 
     ## making and visualizing graph
-    hbond_graph, pos, color = graph_utils.make_graph_hbond(reformatted_edges)
+    hbond_graph, pos, color = graph_utils.make_digraph_hbond(reformatted_edges)
 
     if use_visual:
         graph_utils.visualize_graph(
@@ -532,7 +532,7 @@ def main():
         if dist != 5.0:
             outputFileName = outputFileName + "_" + str(dist)
 
-    use_visual = False
+    use_visual = True
     PDB_data_list = []
     chains_comb = []
 
