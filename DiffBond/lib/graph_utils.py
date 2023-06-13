@@ -137,8 +137,6 @@ def make_graph_hbond(edges):
 # Util function for making a networkx graph object from a list of edges. Automatically puts into bipartite format.
 def make_digraph_hbond(edges):
 
-    print(edges)
-
     G = nx.DiGraph()
     pos = nx.get_node_attributes(G, "pos")
     color = nx.get_node_attributes(G, "color")
