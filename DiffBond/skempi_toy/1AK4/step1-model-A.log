@@ -1,0 +1,436 @@
+
+Using parameters from /infolab/exchange/software/scwrl/Scwrl4.ini
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM     30 HD22 ASN A   3      20.588  71.790  56.204  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM    170 HH12 ARG A  19      10.719  59.463  65.494  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM    172 HH22 ARG A  19       9.717  57.458  65.035  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM    323 HD22 ASN A  35      16.494  60.259  45.582  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM    350 HH12 ARG A  37       7.424  64.899  52.283  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM    352 HH22 ARG A  37       7.394  65.304  50.035  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM    521 HH12 ARG A  55      29.421  50.415  47.105  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM    523 HH22 ARG A  55      31.362  49.234  46.673  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM    593 HE22 GLN A  63      23.200  50.512  46.502  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM    648 HH12 ARG A  69      19.149  43.009  38.261  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM    650 HH22 ARG A  69      18.977  44.271  36.375  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM    674 HD22 ASN A  71      18.521  40.944  42.549  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM    822 HD22 ASN A  87      24.546  72.291  44.093  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM    956 HD22 ASN A 102      26.049  59.063  41.774  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM    985 HD22 ASN A 106      24.430  62.934  32.768  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM   1005 HD22 ASN A 108      21.439  62.265  40.162  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM   1030 HE22 GLN A 111      20.016  50.989  42.900  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM   1284 HD22 ASN A 137      23.810  53.439  69.749  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM   1351 HH12 ARG A 144      29.179  49.401  66.947  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM   1353 HH22 ARG A 144      31.068  49.078  68.182  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM   1393 HH12 ARG A 148      36.391  46.622  54.258  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM   1395 HH22 ARG A 148      37.682  46.715  52.384  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM   1406 HD22 ASN A 149      32.402  38.471  48.700  1.00  0.00           H  
+
+
+Warning: Inconsistent redefinition of the ATOM. The following line will be ignored:
+ATOM   1533 HE22 GLN A 163      10.357  67.838  57.059  1.00  0.00           H  
+
+
+<Timing tag = "Loading_PDB_file"  duration = "0.000" />
+
+Using rotamer library: /infolab/exchange/software/scwrl/bbDepRotLib.bin
+
+Residue A   1  is being treated as N-terminal
+
+Residue A 165  is being treated as C-terminal
+
+<Timing tag = "Adding_residues"  duration = "0.000" />
+
+Sequence file has been loaded
+---------------
+"MVNPTVFFDIAVDGEPLGRVSFELFADKVPKTAENFRALSTGEKGFGYKGSCFHRIIPGFMCQGGDFTRHNGTGGKSIYGEKFEDENFILKHTGPGILSMANAGPNTNGSQFFICTAKTEWLDGKHVVFGKVKEGMNIVEAMERFGSRNGKTSKKITIADCGQLE"
+---------------
+
+<Timing tag = "Building_Atoms_Sets"  duration = "0.010" />
+
+<Timing tag = "Building_Flexible_Subrotamers"  duration = "0.020" />
+
+<Timing tag = "Computing_Symmetry_Operators"  duration = "0.000" />
+
+<Timing tag = "Updating_Self_Energies"  duration = "0.200" />
+
+<Timing tag = "Computing_Active_Rotamers"  duration = "0.000" />
+
+<Timing tag = "Resolving_Disulfide_Bonds"  duration = "0.000" />
+
+
+Total number of subrotamer interactions = 1838676
+
+<Timing tag = "Updating_Pairwise_Energies"  duration = "3.320" />
+
+<Timing tag = "Normalizing_Atoms_Sets"  duration = "0.000" />
+
+<Timing tag = "Computing_Interaction_Graph"  duration = "3.550" />
+ 
+
+<Timing tag = "Building_Atoms_Sets"  duration = "0.010" />
+
+<Timing tag = "Building_Flexible_Subrotamers"  duration = "0.020" />
+
+<Timing tag = "Computing_Symmetry_Operators"  duration = "0.000" />
+
+<Timing tag = "Updating_Self_Energies"  duration = "0.050" />
+
+<Timing tag = "Computing_Active_Rotamers"  duration = "0.000" />
+
+<Timing tag = "Resolving_Disulfide_Bonds"  duration = "0.000" />
+
+
+Total number of subrotamer interactions = 0
+
+<Timing tag = "Updating_Pairwise_Energies"  duration = "0.010" />
+
+<Timing tag = "Normalizing_Atoms_Sets"  duration = "0.000" />
+
+
+Running Goldstein's DEE (version G)
+:::::::::::::::::::::::::::::::::::
+
+Initial number of residues - 128
+Initial number of rotamers - 1625
+
+	452 redundant edges eliminated
+
+	Isolated residues removed - 1 
+
+round 1:
+	57 redundant edges eliminated
+
+	Isolated residues removed - 53 
+	Rotamers eliminated  -  1272
+
+round 2:
+	8 redundant edges eliminated
+
+	Isolated residues removed - 29 
+	Rotamers eliminated  -  182
+
+round 3:
+	3 redundant edges eliminated
+
+	Isolated residues removed - 5 
+	Rotamers eliminated  -  34
+
+round 4:
+	0 redundant edges eliminated
+
+	Isolated residues removed - 7 
+	Rotamers eliminated  -  23
+
+round 5:
+	0 redundant edges eliminated
+
+	Isolated residues removed - 1 
+	Rotamers eliminated  -  2
+
+round 6:
+	0 redundant edges eliminated
+
+	Isolated residues removed - 0 
+	Rotamers eliminated  -  0
+Energy accumulated during DEE = 190.871
+<Timing tag = "DEE"  duration = "0.030" />
+
+Searching for clusters... 7 clusters found
+
+Processing cluster of 13 vertices
+
+Redundant nodes eliminated : 3
+Tree-decomposition has been built. Width+1 = 2
+
+Total combinations to search = 8.16e+2
+   9(   7 ) :   35  31  ->   36
+   8(   9 ) :   35  ->   34
+   7        :   ->   35  60  31
+   6(   8 ) :   34  ->  126  30
+   5(   6 ) :  126  34  ->   33
+   4(   9 ) :   36  ->   58
+   3(   4 ) :   58  ->   62
+   2(   3 ) :   62  ->   63
+   1(   6 ) :   30  ->   27
+   0(   1 ) :   30  ->   19
+
+ArtPts =  0	MaxDegree =  3	MaxBag =  2	AvgBag = 2.4
+
+===============================
+Launching bottom-to-top process
+Combinations:
+	in intersections - 1.1e+02
+	in exclusions   -  583.2
+	total to search  - 8e+02
+
+Maximal size of a key is 80 elements
+
+Processing nodes .........
+<Timing tag = "Bottom_To_Top"  duration = "0.000" />
+
+<Trace tag = "Deciding_on_the_root_node" >
+
+Number of combinations = 1.6e+1
+<Timing tag = "Deciding_on_the_root_node"  duration = "0.000" />
+</Trace>
+<Trace tag = "Top_To_Bottom" >
+
+<Timing tag = "Top_To_Bottom"  duration = "0.000" />
+</Trace>
+Energy of this cluster = 18.2543
+
+
+Processing cluster of 3 vertices
+
+Redundant nodes eliminated : 1
+Tree-decomposition has been built. Width+1 = 1
+
+Total combinations to search = 1e+1
+   1        :   ->    2  21
+   0(   1 ) :    2  ->   18
+
+ArtPts =  0	MaxDegree =  1	MaxBag =  1	AvgBag = 2
+
+===============================
+Launching bottom-to-top process
+Combinations:
+	in intersections -   2
+	in exclusions   -  33.2
+	total to search  -   6
+
+Maximal size of a key is 2 elements
+
+Processing nodes .
+<Timing tag = "Bottom_To_Top"  duration = "0.000" />
+
+<Trace tag = "Deciding_on_the_root_node" >
+
+Number of combinations = 4
+<Timing tag = "Deciding_on_the_root_node"  duration = "0.000" />
+</Trace>
+<Trace tag = "Top_To_Bottom" >
+
+<Timing tag = "Top_To_Bottom"  duration = "0.000" />
+</Trace>
+Energy of this cluster = 8.62145
+
+
+Processing cluster of 2 vertices
+
+Redundant nodes eliminated : 1
+Tree-decomposition has been built. Width+1 = 1
+
+Total combinations to search = 4
+   0        :   ->   47  48
+
+ArtPts =  0	MaxDegree =  0	MaxBag =  1	AvgBag = 2
+
+<Trace tag = "Deciding_on_the_root_node" >
+
+Number of combinations = 4
+<Timing tag = "Deciding_on_the_root_node"  duration = "0.000" />
+</Trace>
+<Trace tag = "Top_To_Bottom" >
+
+<Timing tag = "Top_To_Bottom"  duration = "0.000" />
+</Trace>
+Energy of this cluster = 10.9538
+
+
+Processing cluster of 4 vertices
+
+Redundant nodes eliminated : 1
+Tree-decomposition has been built. Width+1 = 1
+
+Total combinations to search = 4.4e+1
+   2        :   ->  104  14
+   1(   2 ) :  104  ->   16
+   0(   2 ) :   14  ->    8
+
+ArtPts =  0	MaxDegree =  2	MaxBag =  1	AvgBag = 2
+
+===============================
+Launching bottom-to-top process
+Combinations:
+	in intersections -   7
+	in exclusions   -  83.2
+	total to search  -  34
+
+Maximal size of a key is 5 elements
+
+Processing nodes ..
+<Timing tag = "Bottom_To_Top"  duration = "0.000" />
+
+<Trace tag = "Deciding_on_the_root_node" >
+
+Number of combinations = 1e+1
+<Timing tag = "Deciding_on_the_root_node"  duration = "0.000" />
+</Trace>
+<Trace tag = "Top_To_Bottom" >
+
+<Timing tag = "Top_To_Bottom"  duration = "0.000" />
+</Trace>
+Energy of this cluster = 12.494
+
+
+Processing cluster of 6 vertices
+
+Redundant nodes eliminated : 2
+Tree-decomposition has been built. Width+1 = 2
+
+Total combinations to search = 7.6e+1
+   3        :   ->   94  97  72
+   2(   3 ) :   97  ->   73
+   1(   2 ) :   73  ->   78
+   0(   3 ) :   94  ->   92
+
+ArtPts =  0	MaxDegree =  2	MaxBag =  2	AvgBag = 2.25
+
+===============================
+Launching bottom-to-top process
+Combinations:
+	in intersections -  12
+	in exclusions   -  83.2
+	total to search  -  28
+
+Maximal size of a key is 6 elements
+
+Processing nodes ...
+<Timing tag = "Bottom_To_Top"  duration = "0.000" />
+
+<Trace tag = "Deciding_on_the_root_node" >
+
+Number of combinations = 4.8e+1
+<Timing tag = "Deciding_on_the_root_node"  duration = "0.000" />
+</Trace>
+<Trace tag = "Top_To_Bottom" >
+
+<Timing tag = "Top_To_Bottom"  duration = "0.000" />
+</Trace>
+Energy of this cluster = 14.9223
+
+
+Processing cluster of 2 vertices
+
+Redundant nodes eliminated : 1
+Tree-decomposition has been built. Width+1 = 1
+
+Total combinations to search = 2.4e+1
+   0        :   ->  124  38
+
+ArtPts =  0	MaxDegree =  0	MaxBag =  1	AvgBag = 2
+
+<Trace tag = "Deciding_on_the_root_node" >
+
+Number of combinations = 2.4e+1
+<Timing tag = "Deciding_on_the_root_node"  duration = "0.000" />
+</Trace>
+<Trace tag = "Top_To_Bottom" >
+
+<Timing tag = "Top_To_Bottom"  duration = "0.000" />
+</Trace>
+Energy of this cluster = 4.43825
+
+
+Processing cluster of 2 vertices
+
+Redundant nodes eliminated : 1
+Tree-decomposition has been built. Width+1 = 1
+
+Total combinations to search = 4
+   0        :   ->   65  25
+
+ArtPts =  0	MaxDegree =  0	MaxBag =  1	AvgBag = 2
+
+<Trace tag = "Deciding_on_the_root_node" >
+
+Number of combinations = 4
+<Timing tag = "Deciding_on_the_root_node"  duration = "0.000" />
+</Trace>
+<Trace tag = "Top_To_Bottom" >
+
+<Timing tag = "Top_To_Bottom"  duration = "0.000" />
+</Trace>
+Energy of this cluster = 6.52478
+
+
+Total minimal energy of the graph = 267.08
+
+<Timing tag = "Combinatorial_Search"  duration = "0.030" />
+
+<Timing tag = "Deriving_Optimum"  duration = "0.130" />
+
+<Timing tag = "Saving_to_PDB_file"  duration = "0.010" />
+
+
+Deleting workspace.
+
+<Timing tag = "Scwrl4_Execution"  duration = "3.820" />
+

@@ -1,10 +1,10 @@
 # ignore large folders for datasets and results
 .gitignore
-Results/
-Dataset_1
-hbondfinder_data/
-skempi_toy
-figures/
-1brs_muts
-lynx_dataset
-Dataset
+
+# dataset folders
+# skempi_toy
+datasets/*
+
+# results folders
+Results/*
+figures/*

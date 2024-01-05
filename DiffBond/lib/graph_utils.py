@@ -17,18 +17,21 @@ import matplotlib.pyplot as plt
 def reformat_contact_ionic_for_graph(edges, bond_type):
     new_edges = []
     for edge in edges:
+        # print(edge)
         a1 = [
             edge[0][4].strip(),
             edge[0][5].strip(),
             edge[0][3].strip(),
             [float(edge[0][6]), float(edge[0][7]), float(edge[0][8])],
         ]
+        # print("1 ", edge[0][1].strip())
         a2 = [
             edge[1][4].strip(),
             edge[1][5].strip(),
             edge[1][3].strip(),
             [float(edge[1][6]), float(edge[1][7]), float(edge[1][8])],
         ]
+        # print("2 ", edge[1][1].strip())
         e = [bond_type, round(edge[2], 2)]
         reformat_edge = [a1, a2, e]
         if reformat_edge not in new_edges:
@@ -91,40 +94,43 @@ def make_graph_hbond(edges):
         return G, pos
 
     for edge in edges:
+        
+        node0_name = edge[0][0] + "_" + edge[0][1] + "_" + edge[0][2]
+        node1_name = edge[1][0] + "_" + edge[1][1] + "_" + edge[1][2]
         ## added edge labels here
-        G.add_edge(edge[0][1], edge[1][1], bond_type=edge[2][0], weight=edge[2][1])
+        G.add_edge(node0_name, node1_name, bond_type=edge[2][0], weight=edge[2][1])
 
         ## adding node labels
-        G.nodes[edge[0][1]]["AA"] = edge[0][2]
-        G.nodes[edge[1][1]]["AA"] = edge[1][2]
+        G.nodes[node0_name]["AA"] = edge[0][2]
+        G.nodes[node1_name]["AA"] = edge[1][2]
 
-        G.nodes[edge[0][1]]["coord"] = edge[0][3]
-        G.nodes[edge[1][1]]["coord"] = edge[1][3]
+        G.nodes[node0_name]["coord"] = edge[0][3]
+        G.nodes[node1_name]["coord"] = edge[1][3]
 
-        G.nodes[edge[0][1]]["chain"] = edge[0][0]
-        G.nodes[edge[1][1]]["chain"] = edge[1][0]
-
+        G.nodes[node0_name]["chain"] = edge[0][0]
+        G.nodes[node1_name]["chain"] = edge[1][0]
+        
         ## if graph is for hbonds, add a donor acceptor node label
-        edge1_val = G.nodes[edge[0][1]].get("hbond")
-        edge2_val = G.nodes[edge[1][1]].get("hbond")
+        edge1_val = G.nodes[node0_name].get("hbond")
+        edge2_val = G.nodes[node1_name].get("hbond")
         if edge1_val == None:
-            G.nodes[edge[0][1]]["hbond"] = edge[0][4]
+            G.nodes[node0_name]["hbond"] = edge[0][4]
         if edge2_val == None:
-            G.nodes[edge[1][1]]["hbond"] = edge[0][4]
+            G.nodes[node1_name]["hbond"] = edge[0][4]
         if edge1_val != None:
             if edge1_val != edge[0][4]:
-                G.nodes[edge[0][1]]["hbond"] = ["donor", "acceptor"]
+                G.nodes[node0_name]["hbond"] = ["donor", "acceptor"]
         if edge2_val != None:
             if edge2_val != edge[1][4]:
-                G.nodes[edge[1][1]]["hbond"] = ["donor", "acceptor"]
+                G.nodes[node1_name]["hbond"] = ["donor", "acceptor"]
 
         ## use atom positions for position in figures
-        pos[edge[0][1]] = np.array([edge[0][3][0], edge[0][3][1]])
-        pos[edge[1][1]] = np.array([edge[1][3][0], edge[1][3][1]])
+        pos[node0_name] = np.array([edge[0][3][0], edge[0][3][1]])
+        pos[node1_name] = np.array([edge[1][3][0], edge[1][3][1]])
 
         ## use edge to indicate
-        color[edge[0][1]] = (0, 1, 1)
-        color[edge[1][1]] = (1, 0.3, 0.3)
+        color[node0_name] = (0, 1, 1)
+        color[node1_name] = (1, 0.3, 0.3)
 
     num_nodes = G.number_of_nodes()
     num_edges = G.number_of_edges()
@@ -212,22 +218,24 @@ def make_graph(edges):
             edge[0] = edge[1]
             edge[1] = temp
 
+        node0_name = edge[0][0] + "_" + edge[0][1] + "_" + edge[0][2]
+        node1_name = edge[1][0] + "_" + edge[1][1] + "_" + edge[1][2]
         ## added edge labels here
-        G.add_edge(edge[0][1], edge[1][1], bond_type=edge[2][0], weight=edge[2][1])
+        G.add_edge(node0_name, node1_name, bond_type=edge[2][0], weight=edge[2][1])
 
         ## adding node labels
-        G.nodes[edge[0][1]]["AA"] = edge[0][2]
-        G.nodes[edge[1][1]]["AA"] = edge[1][2]
+        G.nodes[node0_name]["AA"] = edge[0][2]
+        G.nodes[node1_name]["AA"] = edge[1][2]
 
-        G.nodes[edge[0][1]]["coord"] = edge[0][3]
-        G.nodes[edge[1][1]]["coord"] = edge[1][3]
+        G.nodes[node0_name]["coord"] = edge[0][3]
+        G.nodes[node1_name]["coord"] = edge[1][3]
 
-        G.nodes[edge[0][1]]["chain"] = edge[0][0]
-        G.nodes[edge[1][1]]["chain"] = edge[1][0]
+        G.nodes[node0_name]["chain"] = edge[0][0]
+        G.nodes[node1_name]["chain"] = edge[1][0]
 
         ## use atom positions for position in figures
-        pos[edge[0][1]] = np.array([edge[0][3][0], edge[0][3][1]])
-        pos[edge[1][1]] = np.array([edge[1][3][0], edge[1][3][1]])
+        pos[node0_name] = np.array([edge[0][3][0], edge[0][3][1]])
+        pos[node1_name] = np.array([edge[1][3][0], edge[1][3][1]])
 
         ## use edge to indicate color
         if not same_chain:
