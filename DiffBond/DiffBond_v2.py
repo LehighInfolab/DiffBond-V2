@@ -11,7 +11,7 @@ import networkx as nx
 from networkx.algorithms import bipartite
 import matplotlib.pyplot as plt
 
-sys.path.insert(1, "./lib")
+sys.path.insert(1, "./libs")
 # import PDBGreedySearch
 import PDB_HB_parser
 import hbondfinder_utils
@@ -32,6 +32,14 @@ DiffBond
 
 # Parse arguments from command line
 def parseArg():
+	"""Parses arguments
+
+	Returns:
+		-i          Can take 1 or 2 input files. If 1 input provided file, DiffBond will split PDB into chains and find inter-chain bonds. If 2 input provided, DiffBond will find intermolecular bonds between the two input files.
+		-m        Search mode. Can be multiple combinations of the following options: Contact = c, Ionic bond = i, Hydrogen bond = h, Salt bridge = S, Cation pi = p. Must include at least 1 option.
+		-d         Distance threshold for search distances between atoms, in angstrom units. 
+		-o         Output file name.
+	"""
 	parser = argparse.ArgumentParser(
 		description="Identify all points between protein structures or chains that are within a certain distance of each other."
 	)

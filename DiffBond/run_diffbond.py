@@ -96,7 +96,7 @@ def progressbar(it, prefix="", size=60, out=sys.stdout):  # Python3.3+
 def calculate_diffbond(file1, file2, output):
 	## Calculates diffbond using os.system() command
 	os.system(
-			"python DiffBond_v2.py -i " + file1 + " " + file2 +" -m h -o " + output
+			"python DiffBond_v2.py -i " + file1 + " " + file2 +" -m i -o " + output
 		)
 
 def base_diffbond_calc(idx_pdb_dict, path):
@@ -166,23 +166,29 @@ def main():
 	# base0 = "../../SKEMPI_dataset_download/base-0"
 	# base_diffbond_calc(reader, base0)
  
-	# base1 = "../../SKEMPI_dataset_download/base-1"
-	# base_diffbond_calc(reader, base1)
+	base1 = "../../SKEMPI_dataset_download/base-1"
+	base_diffbond_calc(reader, base1)
  
-	# base2 = "../../SKEMPI_dataset_download/base-2"
-	# base_diffbond_calc(reader, base2)
+	base2 = "../../SKEMPI_dataset_download/base-2"
+	base_diffbond_calc(reader, base2)
 
-	# base3 = "../../SKEMPI_dataset_download/base-3"
-	# base_diffbond_calc(reader, base3)
+	base3 = "../../SKEMPI_dataset_download/base-3"
+	base_diffbond_calc(reader, base3)
  
-	# base4 = "../../SKEMPI_dataset_download/base-4"
-	# base_diffbond_calc(reader, base4)
+	base4 = "../../SKEMPI_dataset_download/base-4"
+	base_diffbond_calc(reader, base4)
  
-	# base5 = "../../SKEMPI_dataset_download/base-5"
-	# base_diffbond_calc(reader, base5)
+	base5 = "../../SKEMPI_dataset_download/base-5"
+	base_diffbond_calc(reader, base5)
+ 
+	base6 = "../../SKEMPI_dataset_download/base-6"
+	base_diffbond_calc(reader, base6)
+ 
+	base7 = "../../SKEMPI_dataset_download/base-7"
+	base_diffbond_calc(reader, base7)
 
-	wt_path = "../../SKEMPI_dataset_download/wt"
-	wt_diffbond_calc(wt_path)
+	# wt_path = "../../SKEMPI_dataset_download/WT_PPI_processing"
+	# wt_diffbond_calc(wt_path)
 
 
 

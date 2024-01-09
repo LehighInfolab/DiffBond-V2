@@ -1,5 +1,5 @@
-# ignore large folders for datasets and results
 .gitignore
+# ignore large folders for datasets and results
 
 # dataset folders
 # skempi_toy
