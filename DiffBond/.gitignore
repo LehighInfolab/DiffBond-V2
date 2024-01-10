@@ -1,4 +1,5 @@
 .gitignore
+__pycache__
 # ignore large folders for datasets and results
 
 # dataset folders
