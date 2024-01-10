@@ -29,7 +29,150 @@
 </div>
     </nav>
     <main class="pdoc">
-    Hello World!
+    <h1 id="bansa-software">BANSA Software</h1>
+<p>We introduce a method to analyze and compare intermolecular bonds formed between protein-protein interactions. Utilizing the <strong>DiffBond</strong> software, we calculate potential intermolecular bonds, such as ionic bonds, hydrogen bonds, and salt bridges, based on amino acid structural and spatial parameters. This results in a graphical representation of bonds termed a bond network for each protein pair interaction. We then introduce the <em>Bond-anchored Network Structural Alignment</em> (<strong>BANSA</strong>), to align these networks using bond formation as anchor points. This alignment process uses the Root Mean Square Deviation (RMSD) to quantitatively assess the similarity between molecular structures. We validate the BANSA approach using several forms of analysis including a heatmap analysis, which provides a consolidated view of the entire bond network.</p>
+<h1 id="pipeline-overview">Pipeline Overview</h1>
+<ol>
+<li>DiffBond - Takes a protein complex and calculates a graph network of bond features at the interface.</li>
+<li>Graph Interface Alignment - Takes pairs of graph networks and aligns them to each other spatially as to minimize RMSD.</li>
+<li>Aligned Analysis - Bond network-based analysis by aggregating the aligned networks of all graphs in a group and doing spatial bond analysis pairwise among the group.</li>
+</ol>
+<h1 id="detailed-description">Detailed Description</h1>
+<h2 id="1-diffbond">1. DiffBond</h2>
+<p>DiffBond predicts bonds that can occur at the interface of a protein complex based on biochemical and geometric constraints that intermolecular bonds may exist at. Specifically, DiffBond identifies and classifies three intermolecular bonds in protein complexes: ionic bonds, salt bridges, and hydrogen bonds.</p>
+<p><strong>Input:</strong> A protein complex separated into two PDB files for each half of the complex.
+<strong>Output:</strong> A set of files representing the bond network at the interface.</p>
+<ul>
+<li><p>A folder copying the pdb files for downstream analysis</p>
+</li>
+<li><p>A .gml file: JSON file of network with 1. Amino acid as nodes, 2. Two amino acids that form a bond as edges, and related pdb features.</p>
+</li>
+<li><p>A .adjlist file: Adjlist format of graph network</p>
+</li>
+<li><p>Files can be read back into a networkx graph object for ease of use.</p>
+</li>
+</ul>
+<h3 id="command-line-options">Command-Line Options</h3>
+<p>DiffBond_v2.py</p>
+<ul>
+<li>This file contains code for most of the main search functions for finding atoms that meet criteria to form ionic bonds, hydrogen bonds, and salt bridges within a PDB structure.</li>
+</ul>
+<p><strong>Usage:</strong> -i [ Input files ] -m [ Search Mode ] -d [ Distance threshold ] -o [ Output file name]</p>
+<ul>
+<li>-i Can take 1 or 2 input files. If 1 input provided file, DiffBond will split PDB into chains and find inter-chain bonds. If 2 input provided, DiffBond will find intermolecular bonds between the two input files.</li>
+<li>-m Search mode. Can be multiple combinations of the following options: Contact = c, Ionic bond = i, Hydrogen bond = h, Salt bridge = S, Cation pi = p. Must include at least 1 option.</li>
+<li>-d Distance threshold for search distances between atoms, in angstrom units. Default = 5 angstroms</li>
+<li>-o Output file name.</li>
+</ul>
+<h1 id="example-run-on-a-family-of-proteins">Example run on a family of proteins</h1>
+<h3 id="1-run-diffbond_v2-py-on-each-protein-complex-the-protein-complex-should-each-be-divided-into-2-pdbs-representing-each-half-of-the-complex-">1. Run DiffBond_v2.py on each protein complex. The protein complex should each be divided into 2 pdbs representing each half of the complex.</h3>
+<p>Input</p>
+<blockquote>
+<p>python .\DiffBond_v2.py -i .\datasets\1brs_half1.pdb .\datasets\1brs_half2.pdb -m i -d 5</p>
+</blockquote>
+<p>Output</p>
+<blockquote>
+<p>---IONIC BOND PREDICTIONS WITHIN 5.0 DISTANCE---
+[[[&#39;A&#39;, &#39;83&#39;, &#39;ARG&#39;, [28.412, 41.935, 14.055]], [&#39;D&#39;, &#39;39&#39;, &#39;ASP&#39;, [28.063, 40.822, 10.213]], ...
+...</p>
+</blockquote>
+<h3 id="2-run-graph_interface_align-py-on-pairs-of-networks-calculated-in-step-1-the-first-input-is-the-fixed-model-you-want-to-align-to-and-the-second-input-is-the-moving-model-you-want-to-align-">2. Run graph_interface_align.py on pairs of networks calculated in step 1. The first input is the fixed model you want to align to and the second input is the moving model you want to align.</h3>
+<p>Input</p>
+<blockquote>
+<p>python .\graph_interface_align.py -i .\Results\1brs_half1 .\Results\1brs_half2 -m i </p>
+</blockquote>
+<p>Output</p>
+<blockquote>
+<p>1st graph: Graph with 17 nodes and 10 edges
+2nd graph: Graph with 15 nodes and 9 edges
+------------- RMSD calculated for all combinations -------------
+Number of RMSD calculated: 255
+Time to get RMSD: 2.22 s
+Min rmsd: 2.7326994160226563e-05
+------------- RMSD of all 15 calculated alignments with threshold less than 2.0  -------------
+0 : 2.7326994160226563e-05
+1 : 4.2927964331302275e-05
+...
+All files added to dir: results/output_0</p>
+</blockquote>
+<h3 id="3-step-2-produces-a-folder-with-the-top-n-structures-found-and-collects-them-in-the-folder-organize-the-cumulated-results-from-step-2-of-each-pair-into-a-folder-of-folders-like-so-">3. Step 2 produces a folder with the top <em>n</em> structures found and collects them in the folder. Organize the cumulated results from step 2 of each pair into a folder of folders like so:</h3>
+<ul>
+<li><p>Family</p>
+<ul>
+<li>Protein1</li>
+<li>Protein2</li>
+<li>Protein3</li>
+<li>...</li>
+</ul>
+<p>The original reference structure is contained in the interface.pkl file and does not need to be referenced.
+*parseArg() not implemented yet so just change the path to the top-level directory &quot;Family&quot; and run.</p>
+</li>
+</ul>
+<blockquote>
+<p>Loaded data from results/base-0/1BRS/1BRS_i_0/interface.pkl: <proteininterface.ProteinInterface object at 0x000001185B63E280>
+Loaded data from results/base-0/1BRS/1BRS_i_1/interface.pkl: <proteininterface.ProteinInterface object at 0x000001185B620A60>
+...
+Loaded data from results/base-0/1BRS/1BRS_i_92/interface.pkl: <proteininterface.ProteinInterface object at 0x000001191406F190>
+Diff_tracker: [12, 63, 11, 7]
+Max # of different edges: 3
+Mutation set index: 2
+Set of nodes for different edges: {(&#39;A_59_ARG&#39;, &#39;D_35_ASP&#39;), (&#39;A_102_HIS&#39;, &#39;D_39_ASP&#39;), (&#39;A_59_ARG&#39;, &#39;D_76_GLU&#39;)}</p>
+</blockquote>
+<h1 id="example-run-on-skempi">Example run on SKEMPI</h1>
+<p>Most of the steps to run BANSA on the skempi dataset has been automated with several scripts:</p>
+<ul>
+<li>run_diffbond.py runs DiffBond on each skempi protein sequentially.</li>
+<li>run_interface_align.py runs graph_interface_align.py using each wildtype structure as the fixed model and each corresponding mutant structure as the moving model for alignment.</li>
+<li><p>interface_heatmap.py takes <strong>a folder of folders</strong> with aligned structures and extracts an aligned structure from each subfolder before performing graph analysis on all of them aggregated.</p>
+</li>
+<li><p>run_diffbond.py</p>
+<ul>
+<li>In main(), change which bases to calculate on.</li>
+<li>In calculate_diffbond(), change the tag directly after &#39;-m&#39; for which bond type, either to i, h, s etc.</li>
+<li>Run main function to calculate.</li>
+</ul>
+</li>
+<li>run_interface_align.py<ul>
+<li>Point the wt_path to where wt networks were calculated</li>
+<li>Point base_path to where base networks were calculated</li>
+<li>In run_align(), change the tag directly after &#39;-m&#39; for which bond type, either to i, h, s etc.</li>
+<li>Run main function to calculate.</li>
+</ul>
+</li>
+<li>interface_heatmap.py<ul>
+<li>Organize folders from run_interface_align.py into a folder of folders like the following file tree</li>
+<li>In main(), change data to point to top-level directory and run<blockquote>
+<ul>
+<li>1BRS<ul>
+<li>1BRS_i_0</li>
+<li>1BRS_i_1</li>
+<li>...</li>
+<li>1BRS_i_91</li>
+<li>1BRS_i_92</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="summary-of-diffbond-executables-and-lib-files">Summary of DiffBond executables and lib files</h2>
+<ul>
+<li>DiffBond_v2.py : Executable to generate graph network files for one protein complex</li>
+<li>DiffBond.py : Old version of DiffBond</li>
+<li>hbondfinder.py : Executable for calculating hydrogen bonds - required in the same folder of DiffBond_v2.py in order to calculate hydrogen bonds</li>
+<li>reformatPDBtoSKA.py : Short script to reformat PDB files to be compatible with ska (ska requires all amino acids to be &#39;A&#39; chain)</li>
+<li>run_diffbond.py : Script to execute multiple instances of DiffBond_v2.py on the SKEMPI dataset or a dataset folder.</li>
+<li>lib/</li>
+<li>graph_utils.py : Utility functions to parse and work with networkx graphs.</li>
+<li>hbondfinder_utils.py : Utility functions to parse hbondfinder outputs into a list containing hbond edges</li>
+<li>PDB_HB_parser.py : Miscellaneous utility functions for PDB parsing</li>
+<li>JSON_Files/</li>
+<li>Two JSON files mapping amino acid 3-letter codes to its corresponding atom identifier.</li>
+<li>skempi_toy : Toy dataset with a few skempi PDB complexes for testing.</li>
+</ul>
+
     </main>
 </body>
 </html>
