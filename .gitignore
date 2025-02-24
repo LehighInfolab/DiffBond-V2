@@ -9,14 +9,15 @@ DiffBond/datasets/*
 results/*
 DiffBond/results/*
 
+# figures folders
 figures/*
 DiffBond/figures/*
 
-# ignore files
-!results/.placeholder
-!datasets/.placeholder
-!figures/.placeholder
-!logs/.placeholder
+# don't ignore files
+!DiffBond/results/.placeholder
+!DiffBond/datasets/.placeholder
+!DiffBond/figures/.placeholder
+!DiffBond/logs/.placeholder
 
 # Python
 __pycache__/
