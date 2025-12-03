@@ -218,5 +218,6 @@ __marimo__/
 
 # ignore large folders for datasets and results
 Results/
+old_Results/
 datasets/
 skempi_toy

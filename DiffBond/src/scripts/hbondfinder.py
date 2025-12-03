@@ -30,9 +30,9 @@ from Bio.PDB.PDBParser import PDBParser
 
 # Loads JSON file into Python Dictionary Object
 def get_acceptor_donor_dictionary():
-    acceptor_donor_file = open(dict_json_file, "r")
-    acceptor_donor_string = acceptor_donor_file.read()
-    acceptor_donor_dict = json.loads(acceptor_donor_string)
+    with open(dict_json_file, "r") as acceptor_donor_file:
+        acceptor_donor_string = acceptor_donor_file.read()
+        acceptor_donor_dict = json.loads(acceptor_donor_string)
 
     return acceptor_donor_dict
 
@@ -130,7 +130,8 @@ def getListOfDonorAndHydrogenAtoms_OLD(PDB_file):
                             if potentialDonor.get_parent() == residue:
                                 if (
                                     potentialDonor.get_name() == "NE"
-                                    and potentialDonor.get_parent().get_resname() == "ARG"
+                                    and potentialDonor.get_parent().get_resname()
+                                    == "ARG"
                                     and atom.get_name() == "HE"
                                 ):
                                     donor_hydrogen_list.append([potentialDonor, atom])
@@ -138,23 +139,32 @@ def getListOfDonorAndHydrogenAtoms_OLD(PDB_file):
                                     # donorList.remove(potentialDonor)
                                 if (
                                     potentialDonor.get_name() == "NH1"
-                                    and potentialDonor.get_parent().get_resname() == "ARG"
-                                    and (atom.get_name() == "HH11" or atom.get_name() == "HH12")
+                                    and potentialDonor.get_parent().get_resname()
+                                    == "ARG"
+                                    and (
+                                        atom.get_name() == "HH11"
+                                        or atom.get_name() == "HH12"
+                                    )
                                 ):
                                     donor_hydrogen_list.append([potentialDonor, atom])
                                     # print(str(residue.get_resname()) + str([potentialDonor, atom]))
                                     # donorList.remove(potentialDonor)
                                 if (
                                     potentialDonor.get_name() == "NH2"
-                                    and potentialDonor.get_parent().get_resname() == "ARG"
-                                    and (atom.get_name() == "HH21" or atom.get_name() == "HH22")
+                                    and potentialDonor.get_parent().get_resname()
+                                    == "ARG"
+                                    and (
+                                        atom.get_name() == "HH21"
+                                        or atom.get_name() == "HH22"
+                                    )
                                 ):
                                     donor_hydrogen_list.append([potentialDonor, atom])
                                     # print(str(residue.get_resname()) + str([potentialDonor, atom]))
                                     # donorList.remove(potentialDonor)
                                 if (
                                     potentialDonor.get_name() == "SG"
-                                    and potentialDonor.get_parent().get_resname() == "CYS"
+                                    and potentialDonor.get_parent().get_resname()
+                                    == "CYS"
                                     and atom.get_name() == "HG"
                                 ):
                                     donor_hydrogen_list.append([potentialDonor, atom])
@@ -162,15 +172,20 @@ def getListOfDonorAndHydrogenAtoms_OLD(PDB_file):
                                     # donorList.remove(potentialDonor)
                                 if (
                                     potentialDonor.get_name() == "NE2"
-                                    and potentialDonor.get_parent().get_resname() == "GLN"
-                                    and (atom.get_name() == "HE21" or atom.get_name() == "HE22")
+                                    and potentialDonor.get_parent().get_resname()
+                                    == "GLN"
+                                    and (
+                                        atom.get_name() == "HE21"
+                                        or atom.get_name() == "HE22"
+                                    )
                                 ):
                                     donor_hydrogen_list.append([potentialDonor, atom])
                                     # print(str(residue.get_resname()) + str([potentialDonor, atom]))
                                     # donorList.remove(potentialDonor)
                                 if (
                                     potentialDonor.get_name() == "NE2"
-                                    and potentialDonor.get_parent().get_resname() == "HIS"
+                                    and potentialDonor.get_parent().get_resname()
+                                    == "HIS"
                                     and atom.get_name() == "HE2"
                                 ):
                                     donor_hydrogen_list.append([potentialDonor, atom])
@@ -182,9 +197,12 @@ def getListOfDonorAndHydrogenAtoms_OLD(PDB_file):
                                 #  donorList.remove(potentialDonor)
                                 if (
                                     potentialDonor.get_name() == "NZ"
-                                    and potentialDonor.get_parent().get_resname() == "LYS"
+                                    and potentialDonor.get_parent().get_resname()
+                                    == "LYS"
                                     and (
-                                        atom.get_name() == "HZ1" or atom.get_name() == "HZ2" or atom.get_name() == "HZ3"
+                                        atom.get_name() == "HZ1"
+                                        or atom.get_name() == "HZ2"
+                                        or atom.get_name() == "HZ3"
                                     )
                                 ):
                                     donor_hydrogen_list.append([potentialDonor, atom])
@@ -192,7 +210,8 @@ def getListOfDonorAndHydrogenAtoms_OLD(PDB_file):
                                     # donorList.remove(potentialDonor)
                                 if (
                                     potentialDonor.get_name() == "OG"
-                                    and potentialDonor.get_parent().get_resname() == "SER"
+                                    and potentialDonor.get_parent().get_resname()
+                                    == "SER"
                                     and atom.get_name() == "HG"
                                 ):
                                     donor_hydrogen_list.append([potentialDonor, atom])
@@ -200,7 +219,8 @@ def getListOfDonorAndHydrogenAtoms_OLD(PDB_file):
                                     donorList.remove(potentialDonor)
                                 if (
                                     potentialDonor.get_name() == "OG1"
-                                    and potentialDonor.get_parent().get_resname() == "THR"
+                                    and potentialDonor.get_parent().get_resname()
+                                    == "THR"
                                     and atom.get_name() == "HG1"
                                 ):
                                     donor_hydrogen_list.append([potentialDonor, atom])
@@ -208,7 +228,8 @@ def getListOfDonorAndHydrogenAtoms_OLD(PDB_file):
                                     donorList.remove(potentialDonor)
                                 if (
                                     potentialDonor.get_name() == "OH"
-                                    and potentialDonor.get_parent().get_resname() == "TYR"
+                                    and potentialDonor.get_parent().get_resname()
+                                    == "TYR"
                                     and atom.get_name() == "HH"
                                 ):
                                     donor_hydrogen_list.append([potentialDonor, atom])
@@ -216,7 +237,8 @@ def getListOfDonorAndHydrogenAtoms_OLD(PDB_file):
                                     donorList.remove(potentialDonor)
                                 if (
                                     potentialDonor.get_name() == "NE1"
-                                    and potentialDonor.get_parent().get_resname() == "TRP"
+                                    and potentialDonor.get_parent().get_resname()
+                                    == "TRP"
                                     and atom.get_name() == "HE1"
                                 ):
                                     donor_hydrogen_list.append([potentialDonor, atom])
@@ -224,8 +246,12 @@ def getListOfDonorAndHydrogenAtoms_OLD(PDB_file):
                                     donorList.remove(potentialDonor)
                                 if (
                                     potentialDonor.get_name() == "ND2"
-                                    and potentialDonor.get_parent().get_resname() == "ASN"
-                                    and (atom.get_name() == "HD21" or atom.get_name() == "HD22")
+                                    and potentialDonor.get_parent().get_resname()
+                                    == "ASN"
+                                    and (
+                                        atom.get_name() == "HD21"
+                                        or atom.get_name() == "HD22"
+                                    )
                                 ):
                                     donor_hydrogen_list.append([potentialDonor, atom])
                                     # print(str(residue.get_resname()) + str([potentialDonor, atom]))
@@ -277,7 +303,9 @@ def getListOfDonorAndHydrogenAtoms(PDB_file):
                             # Finds hydrogen that corresponds to a specific donor atom
                             for hydrogen_key in acceptor_donor_dict[res_str]:
                                 if hydrogen_key[0] == "H":
-                                    hydrogen_str = acceptor_donor_dict[res_str][hydrogen_key]
+                                    hydrogen_str = acceptor_donor_dict[res_str][
+                                        hydrogen_key
+                                    ]
                                     hydrogen_num = int(hydrogen_key[1])
 
                                     # When it finds the hydrogen atom name corresponding to the donor ...
@@ -300,18 +328,27 @@ def getListOfDonorAndHydrogenAtoms(PDB_file):
                                         # Appends a warning when either hydrogen or donor was not found
                                         if hydrogen_found == 0:
                                             warnings_list.append(
-                                                "WARNING: " + hydrogen_str + " was not found in " + res_str
+                                                "WARNING: "
+                                                + hydrogen_str
+                                                + " was not found in "
+                                                + res_str
                                             )
                                         if donor_found == 0:
                                             warnings_list.append(
-                                                "WARNING: " + donor_str + " was not found in " + res_str
+                                                "WARNING: "
+                                                + donor_str
+                                                + " was not found in "
+                                                + res_str
                                             )
                                         if (
-                                            donor_atom.get_parent() == hydrogen_atom.get_parent()
+                                            donor_atom.get_parent()
+                                            == hydrogen_atom.get_parent()
                                             and donor_found == 1
                                             and hydrogen_found == 1
                                         ):
-                                            donorList1.append([donor_atom, hydrogen_atom])
+                                            donorList1.append(
+                                                [donor_atom, hydrogen_atom]
+                                            )
     return donorList1
 
 
@@ -366,7 +403,9 @@ def getGridBoxNumber(atom):
 
 def getGridBoxNumberWithCoords(x_coord, y_coord, z_coord):
 
-    block_num = int(z_block_num * (xBoxDim * yBoxDim) + y_block_num * (xBoxDim) + x_block_num)
+    block_num = int(
+        z_block_num * (xBoxDim * yBoxDim) + y_block_num * (xBoxDim) + x_block_num
+    )
 
 
 def getBoxNumbers_forRandomTesting(x_coord, y_coord, z_coord):
@@ -537,7 +576,9 @@ def add_buffer_block_in_z_direction(max_z_block, min_z_block):
 
 # Adds a buffer block in a certain direction, however these methods
 # do not rely on any global variables
-def add_buffer_block_in_x_direction_DIFFERENT_DIMENSIONS(max_x_block, min_x_block, xBoxDim):
+def add_buffer_block_in_x_direction_DIFFERENT_DIMENSIONS(
+    max_x_block, min_x_block, xBoxDim
+):
     if (max_x_block + 1) < xBoxDim:
         max_x_block = max_x_block + 1
     if (min_x_block - 1) >= 0:
@@ -545,7 +586,9 @@ def add_buffer_block_in_x_direction_DIFFERENT_DIMENSIONS(max_x_block, min_x_bloc
     return [max_x_block, min_x_block]
 
 
-def add_buffer_block_in_y_direction_DIFFERENT_DIMENSIONS(max_y_block, min_y_block, yBoxDim):
+def add_buffer_block_in_y_direction_DIFFERENT_DIMENSIONS(
+    max_y_block, min_y_block, yBoxDim
+):
     if (max_y_block + 1) < yBoxDim:
         max_y_block = max_y_block + 1
     if (min_y_block - 1) >= 0:
@@ -553,7 +596,9 @@ def add_buffer_block_in_y_direction_DIFFERENT_DIMENSIONS(max_y_block, min_y_bloc
     return [max_y_block, min_y_block]
 
 
-def add_buffer_block_in_z_direction_DIFFERENT_DIMENSIONS(max_z_block, min_z_block, zBoxDim):
+def add_buffer_block_in_z_direction_DIFFERENT_DIMENSIONS(
+    max_z_block, min_z_block, zBoxDim
+):
     if (max_z_block + 1) < zBoxDim:
         max_z_block = max_z_block + 1
     if (min_z_block - 1) >= 0:
@@ -577,11 +622,19 @@ def buildGrid(list_of_atoms):
         z_block_num = z_coord_pos // DESIRED_BOX_DIMENSTION
 
         # Now, lets append this atom to the correct block
-        grid[int(z_block_num * (xBoxDim * yBoxDim) + y_block_num * (xBoxDim) + x_block_num)].append(atom)
+        grid[
+            int(
+                z_block_num * (xBoxDim * yBoxDim)
+                + y_block_num * (xBoxDim)
+                + x_block_num
+            )
+        ].append(atom)
 
 
 # buildGrid for random testing of points, method doesn't rely on any global variables
-def buildGrid_RandomTesting(list_of_coordinates, testGrid, BOX_DIMENSION, lattice_dimensions):
+def buildGrid_RandomTesting(
+    list_of_coordinates, testGrid, BOX_DIMENSION, lattice_dimensions
+):
 
     xBoxDimension, yBoxDimension, zBoxDimension = lattice_dimensions
 
@@ -595,13 +648,19 @@ def buildGrid_RandomTesting(list_of_coordinates, testGrid, BOX_DIMENSION, lattic
 
         # Now, lets append this atom to the correct block
         testGrid[
-            int(z_block_num * (xBoxDimension * yBoxDimension) + y_block_num * (xBoxDimension) + x_block_num)
+            int(
+                z_block_num * (xBoxDimension * yBoxDimension)
+                + y_block_num * (xBoxDimension)
+                + x_block_num
+            )
         ].append(coords)
     return testGrid
 
 
 # buildGrid for General Cases, method doesn't rely on any global variables
-def buildGrid_DifferentSizes(list_of_atoms, testGrid, BOX_DIMENSION, lattice_dimensions, min_coordinates):
+def buildGrid_DifferentSizes(
+    list_of_atoms, testGrid, BOX_DIMENSION, lattice_dimensions, min_coordinates
+):
     xBoxDimension, yBoxDimension, zBoxDimension = lattice_dimensions
     for atom in list_of_atoms:
         x_coord, y_coord, z_coord = atom.get_coord()
@@ -620,7 +679,11 @@ def buildGrid_DifferentSizes(list_of_atoms, testGrid, BOX_DIMENSION, lattice_dim
 
         # Now, lets append this atom to the correct block
         testGrid[
-            int(z_block_num * (xBoxDimension * yBoxDimension) + y_block_num * (xBoxDimension) + x_block_num)
+            int(
+                z_block_num * (xBoxDimension * yBoxDimension)
+                + y_block_num * (xBoxDimension)
+                + x_block_num
+            )
         ].append(atom)
     return testGrid
 
@@ -659,8 +722,12 @@ def queryBoxOnAllDonors(donor_hydrogen_list, PDB_file):
         max_x_block_forRange = int(max_x_coord_forRange // DESIRED_BOX_DIMENSTION)
         min_x_block_forRange = int(min_x_coord_forRange // DESIRED_BOX_DIMENSTION)
 
-        max_x_block_forRange = doubleCheck_x_BoxBoundaries_General(max_x_block_forRange, xBoxDim)
-        min_x_block_forRange = doubleCheck_x_BoxBoundaries_General(min_x_block_forRange, xBoxDim)
+        max_x_block_forRange = doubleCheck_x_BoxBoundaries_General(
+            max_x_block_forRange, xBoxDim
+        )
+        min_x_block_forRange = doubleCheck_x_BoxBoundaries_General(
+            min_x_block_forRange, xBoxDim
+        )
 
         # Next, lets go forward and backward in y-direction
         max_y_coord_forRange = donor_y_coord + MAX_DONOR_ACCEPTOR_DIST
@@ -672,8 +739,12 @@ def queryBoxOnAllDonors(donor_hydrogen_list, PDB_file):
         max_y_block_forRange = int(max_y_coord_forRange // DESIRED_BOX_DIMENSTION)
         min_y_block_forRange = int(min_y_coord_forRange // DESIRED_BOX_DIMENSTION)
 
-        max_y_block_forRange = doubleCheck_y_BoxBoundaries_General(max_y_block_forRange, yBoxDim)
-        min_y_block_forRange = doubleCheck_y_BoxBoundaries_General(min_y_block_forRange, yBoxDim)
+        max_y_block_forRange = doubleCheck_y_BoxBoundaries_General(
+            max_y_block_forRange, yBoxDim
+        )
+        min_y_block_forRange = doubleCheck_y_BoxBoundaries_General(
+            min_y_block_forRange, yBoxDim
+        )
 
         # Nexts, lets go forward and backward in z-direction
         max_z_coord_forRange = donor_z_coord + MAX_DONOR_ACCEPTOR_DIST
@@ -685,8 +756,12 @@ def queryBoxOnAllDonors(donor_hydrogen_list, PDB_file):
         max_z_block_forRange = int(max_z_coord_forRange // DESIRED_BOX_DIMENSTION)
         min_z_block_forRange = int(min_z_coord_forRange // DESIRED_BOX_DIMENSTION)
 
-        max_z_block_forRange = doubleCheck_z_BoxBoundaries_General(max_z_block_forRange, zBoxDim)
-        min_z_block_forRange = doubleCheck_z_BoxBoundaries_General(min_z_block_forRange, zBoxDim)
+        max_z_block_forRange = doubleCheck_z_BoxBoundaries_General(
+            max_z_block_forRange, zBoxDim
+        )
+        min_z_block_forRange = doubleCheck_z_BoxBoundaries_General(
+            min_z_block_forRange, zBoxDim
+        )
 
         # Add a buffer block in each direction to cover situations where atoms are exactly on the border of blocks
         max_x_block_forRange, min_x_block_forRange = add_buffer_block_in_x_direction(
@@ -703,16 +778,26 @@ def queryBoxOnAllDonors(donor_hydrogen_list, PDB_file):
             for y_block in range(min_y_block_forRange, max_y_block_forRange + 1):
                 for z_block in range(min_z_block_forRange, max_z_block_forRange + 1):
 
-                    grid_num = int(z_block * (xBoxDim * yBoxDim) + y_block * (xBoxDim) + x_block)
+                    grid_num = int(
+                        z_block * (xBoxDim * yBoxDim) + y_block * (xBoxDim) + x_block
+                    )
 
                     for acceptor_atom in grid[grid_num]:
-                        donor_acceptor_pairs.append([donor_hydrogen_pair, acceptor_atom])
+                        donor_acceptor_pairs.append(
+                            [donor_hydrogen_pair, acceptor_atom]
+                        )
     return donor_acceptor_pairs
 
 
 # queryBox method for random testing, method doesn't rely on any global variables
 def queryBox_RandomTesting(
-    testGrid, list_of_test_atoms, BOX_DIMENSION, lattice_dimensions, min_coordinates, max_coordinates, grid_dimensions
+    testGrid,
+    list_of_test_atoms,
+    BOX_DIMENSION,
+    lattice_dimensions,
+    min_coordinates,
+    max_coordinates,
+    grid_dimensions,
 ):
     donor_acceptor_pairs = []
 
@@ -748,8 +833,12 @@ def queryBox_RandomTesting(
         min_x_coord_forRange = donor_x_coord - MAX_DONOR_ACCEPTOR_DIST
         # print("1. max x  =  " + str(max_x_coord_forRange) + "  min x  = " + str(min_x_coord_forRange) )
 
-        max_x_coord_forRange = doubleCheck_x_boundaries_General(max_x_coord_forRange, xDim)
-        min_x_coord_forRange = doubleCheck_x_boundaries_General(min_x_coord_forRange, xDim)
+        max_x_coord_forRange = doubleCheck_x_boundaries_General(
+            max_x_coord_forRange, xDim
+        )
+        min_x_coord_forRange = doubleCheck_x_boundaries_General(
+            min_x_coord_forRange, xDim
+        )
         # print("2. max x  =  " + str(max_x_coord_forRange) + "  min x  = " + str(min_x_coord_forRange) )
 
         max_x_block_forRange = int(max_x_coord_forRange // BOX_DIMENSION)
@@ -761,8 +850,12 @@ def queryBox_RandomTesting(
         max_y_coord_forRange = donor_y_coord + MAX_DONOR_ACCEPTOR_DIST
         min_y_coord_forRange = donor_y_coord - MAX_DONOR_ACCEPTOR_DIST
 
-        max_y_coord_forRange = doubleCheck_y_boundaries_General(max_y_coord_forRange, yDim)
-        min_y_coord_forRange = doubleCheck_y_boundaries_General(min_y_coord_forRange, yDim)
+        max_y_coord_forRange = doubleCheck_y_boundaries_General(
+            max_y_coord_forRange, yDim
+        )
+        min_y_coord_forRange = doubleCheck_y_boundaries_General(
+            min_y_coord_forRange, yDim
+        )
 
         max_y_block_forRange = int(max_y_coord_forRange // BOX_DIMENSION)
         min_y_block_forRange = int(min_y_coord_forRange // BOX_DIMENSION)
@@ -771,21 +864,31 @@ def queryBox_RandomTesting(
         max_z_coord_forRange = donor_z_coord + MAX_DONOR_ACCEPTOR_DIST
         min_z_coord_forRange = donor_z_coord - MAX_DONOR_ACCEPTOR_DIST
 
-        max_z_coord_forRange = doubleCheck_z_boundaries_General(max_z_coord_forRange, zDim)
-        min_z_coord_forRange = doubleCheck_z_boundaries_General(min_z_coord_forRange, zDim)
+        max_z_coord_forRange = doubleCheck_z_boundaries_General(
+            max_z_coord_forRange, zDim
+        )
+        min_z_coord_forRange = doubleCheck_z_boundaries_General(
+            min_z_coord_forRange, zDim
+        )
 
         max_z_block_forRange = int(max_z_coord_forRange // BOX_DIMENSION)
         min_z_block_forRange = int(min_z_coord_forRange // BOX_DIMENSION)
 
         # Add a buffer block in each direction to cover situations where atoms are exactly on the border of blocks
-        max_x_block_forRange, min_x_block_forRange = add_buffer_block_in_x_direction_DIFFERENT_DIMENSIONS(
-            max_x_block_forRange, min_x_block_forRange, xBoxDim
+        max_x_block_forRange, min_x_block_forRange = (
+            add_buffer_block_in_x_direction_DIFFERENT_DIMENSIONS(
+                max_x_block_forRange, min_x_block_forRange, xBoxDim
+            )
         )
-        max_y_block_forRange, min_y_block_forRange = add_buffer_block_in_y_direction_DIFFERENT_DIMENSIONS(
-            max_y_block_forRange, min_y_block_forRange, yBoxDim
+        max_y_block_forRange, min_y_block_forRange = (
+            add_buffer_block_in_y_direction_DIFFERENT_DIMENSIONS(
+                max_y_block_forRange, min_y_block_forRange, yBoxDim
+            )
         )
-        max_z_block_forRange, min_z_block_forRange = add_buffer_block_in_z_direction_DIFFERENT_DIMENSIONS(
-            max_z_block_forRange, min_z_block_forRange, zBoxDim
+        max_z_block_forRange, min_z_block_forRange = (
+            add_buffer_block_in_z_direction_DIFFERENT_DIMENSIONS(
+                max_z_block_forRange, min_z_block_forRange, zBoxDim
+            )
         )
 
         # print(atom)
@@ -798,7 +901,9 @@ def queryBox_RandomTesting(
             for y_block in range(min_y_block_forRange, max_y_block_forRange + 1):
                 for z_block in range(min_z_block_forRange, max_z_block_forRange + 1):
 
-                    grid_num = int(z_block * (xBoxDim * yBoxDim) + y_block * (xBoxDim) + x_block)
+                    grid_num = int(
+                        z_block * (xBoxDim * yBoxDim) + y_block * (xBoxDim) + x_block
+                    )
                     # print("x block = " + str(x_block) + "    xBoxDim = " + str(xBoxDim))
                     # print("y block = " + str(y_block) + "    yBoxDim = " + str(yBoxDim))
                     # print("z block = " + str(z_block) + "    zBoxDim = " + str(zBoxDim))
@@ -810,7 +915,12 @@ def queryBox_RandomTesting(
 
 # queryBox method for General Cases, method doesn't rely on any global variables
 def queryBox_DifferentSizes(
-    testGrid, list_of_donor_atoms, BOX_DIMENSION, lattice_dimensions, min_coordinates, gridDimensions
+    testGrid,
+    list_of_donor_atoms,
+    BOX_DIMENSION,
+    lattice_dimensions,
+    min_coordinates,
+    gridDimensions,
 ):
     donor_acceptor_pairs = []
 
@@ -845,8 +955,12 @@ def queryBox_DifferentSizes(
         max_x_block_forRange = int(max_x_coord_forRange // BOX_DIMENSION)
         min_x_block_forRange = int(min_x_coord_forRange // BOX_DIMENSION)
 
-        max_x_block_forRange = doubleCheck_x_BoxBoundaries_General(max_x_block_forRange, xBoxDim)
-        min_x_block_forRange = doubleCheck_x_BoxBoundaries_General(min_x_block_forRange, xBoxDim)
+        max_x_block_forRange = doubleCheck_x_BoxBoundaries_General(
+            max_x_block_forRange, xBoxDim
+        )
+        min_x_block_forRange = doubleCheck_x_BoxBoundaries_General(
+            min_x_block_forRange, xBoxDim
+        )
 
         # Next, lets go forward and backward in y-direction
         max_y_coord_forRange = donor_y_coord + MAX_DONOR_ACCEPTOR_DIST
@@ -855,8 +969,12 @@ def queryBox_DifferentSizes(
         max_y_block_forRange = int(max_y_coord_forRange // BOX_DIMENSION)
         min_y_block_forRange = int(min_y_coord_forRange // BOX_DIMENSION)
 
-        max_y_block_forRange = doubleCheck_y_BoxBoundaries_General(max_y_block_forRange, yBoxDim)
-        min_y_block_forRange = doubleCheck_y_BoxBoundaries_General(min_y_block_forRange, yBoxDim)
+        max_y_block_forRange = doubleCheck_y_BoxBoundaries_General(
+            max_y_block_forRange, yBoxDim
+        )
+        min_y_block_forRange = doubleCheck_y_BoxBoundaries_General(
+            min_y_block_forRange, yBoxDim
+        )
 
         # Nexts, lets go forward and backward in z-direction
         max_z_coord_forRange = donor_z_coord + MAX_DONOR_ACCEPTOR_DIST
@@ -865,18 +983,28 @@ def queryBox_DifferentSizes(
         max_z_block_forRange = int(max_z_coord_forRange // BOX_DIMENSION)
         min_z_block_forRange = int(min_z_coord_forRange // BOX_DIMENSION)
 
-        max_z_block_forRange = doubleCheck_z_BoxBoundaries_General(max_z_block_forRange, zBoxDim)
-        min_z_block_forRange = doubleCheck_z_BoxBoundaries_General(min_z_block_forRange, zBoxDim)
+        max_z_block_forRange = doubleCheck_z_BoxBoundaries_General(
+            max_z_block_forRange, zBoxDim
+        )
+        min_z_block_forRange = doubleCheck_z_BoxBoundaries_General(
+            min_z_block_forRange, zBoxDim
+        )
 
         # Add a buffer block in each direction to cover situations where atoms are exactly on the border of blocks
-        max_x_block_forRange, min_x_block_forRange = add_buffer_block_in_x_direction_DIFFERENT_DIMENSIONS(
-            max_x_block_forRange, min_x_block_forRange, xBoxDim
+        max_x_block_forRange, min_x_block_forRange = (
+            add_buffer_block_in_x_direction_DIFFERENT_DIMENSIONS(
+                max_x_block_forRange, min_x_block_forRange, xBoxDim
+            )
         )
-        max_y_block_forRange, min_y_block_forRange = add_buffer_block_in_y_direction_DIFFERENT_DIMENSIONS(
-            max_y_block_forRange, min_y_block_forRange, yBoxDim
+        max_y_block_forRange, min_y_block_forRange = (
+            add_buffer_block_in_y_direction_DIFFERENT_DIMENSIONS(
+                max_y_block_forRange, min_y_block_forRange, yBoxDim
+            )
         )
-        max_z_block_forRange, min_z_block_forRange = add_buffer_block_in_z_direction_DIFFERENT_DIMENSIONS(
-            max_z_block_forRange, min_z_block_forRange, zBoxDim
+        max_z_block_forRange, min_z_block_forRange = (
+            add_buffer_block_in_z_direction_DIFFERENT_DIMENSIONS(
+                max_z_block_forRange, min_z_block_forRange, zBoxDim
+            )
         )
 
         # Iterates through the sub-box in lattice and finds all possible acceptors
@@ -884,10 +1012,14 @@ def queryBox_DifferentSizes(
             for y_block in range(min_y_block_forRange, max_y_block_forRange + 1):
                 for z_block in range(min_z_block_forRange, max_z_block_forRange + 1):
 
-                    grid_num = int(z_block * (xBoxDim * yBoxDim) + y_block * (xBoxDim) + x_block)
+                    grid_num = int(
+                        z_block * (xBoxDim * yBoxDim) + y_block * (xBoxDim) + x_block
+                    )
 
                     for acceptor_atom in testGrid[grid_num]:
-                        donor_acceptor_pairs.append([donor_hydrogen_pair, acceptor_atom])
+                        donor_acceptor_pairs.append(
+                            [donor_hydrogen_pair, acceptor_atom]
+                        )
     return donor_acceptor_pairs
 
 
@@ -903,11 +1035,17 @@ def getAcceptorAntecedent(acceptor_atom):
     # Get the acceptor number
     acceptor_num = -1
     for key in acceptor_donor_dictionary[parent_resname]:
-        if key[0] == "A" and key[1] != "A" and acceptor_donor_dictionary[parent_resname][key] == acceptor_name:
+        if (
+            key[0] == "A"
+            and key[1] != "A"
+            and acceptor_donor_dictionary[parent_resname][key] == acceptor_name
+        ):
             acceptor_num = key[1]
 
     # Get the acceptor antecedent name
-    acceptor_antecedent_name = acceptor_donor_dictionary[parent_resname]["AA" + acceptor_num]
+    acceptor_antecedent_name = acceptor_donor_dictionary[parent_resname][
+        "AA" + acceptor_num
+    ]
 
     # Get the acceptor antecedent atom
     acceptor_antecedent_found = -1
@@ -964,7 +1102,9 @@ def filterListOfPotentialHBonds(potential_H_bonds):
         x1, y1, z1 = acceptor_atom.get_coord()
 
         # x2, y2, z2 are for donor / x1, y1, z1 are for acceptor
-        dist_between_donor_acceptor = ((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2) ** (1.0 / 2.0)
+        dist_between_donor_acceptor = (
+            (x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2
+        ) ** (1.0 / 2.0)
 
         # Checks if donor is water molecule, because certain checks won't apply (hetfield is an attribute of a Biopython residue)
         # All checks that involve using an hydrogen position from input, will NOT be checked.
@@ -977,7 +1117,9 @@ def filterListOfPotentialHBonds(potential_H_bonds):
             # H-A max distance of 2.5
             x2, y2, z2 = hydrogen_atom.get_coord()
             x1, y1, z1 = acceptor_atom.get_coord()
-            dist_between_hydrogen_acceptor = ((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2) ** (1.0 / 2.0)
+            dist_between_hydrogen_acceptor = (
+                (x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2
+            ) ** (1.0 / 2.0)
 
             # Makes sure H-A is an approriate distance (raises flag if doesn't match criteria)
             if dist_between_hydrogen_acceptor > 2.5:
@@ -1003,14 +1145,18 @@ def filterListOfPotentialHBonds(potential_H_bonds):
 
         # Does not perform these checks on acceptors from water molecules since there are no acceptor antecedent
         if acceptor_hetfield != "W":
-            acceptor_antecedent_atom, found_status = getAcceptorAntecedent(acceptor_atom)
+            acceptor_antecedent_atom, found_status = getAcceptorAntecedent(
+                acceptor_atom
+            )
 
             # Checks that the D-A-AA angle >= 90
             if found_status > 0:
                 donor_vector = donor_atom.get_vector()
                 acceptor_vector = acceptor_atom.get_vector()
                 acceptor_antecedent_vector = acceptor_antecedent_atom.get_vector()
-                D_A_AA_angle = calc_angle(donor_vector, acceptor_vector, acceptor_antecedent_vector)
+                D_A_AA_angle = calc_angle(
+                    donor_vector, acceptor_vector, acceptor_antecedent_vector
+                )
                 D_A_AA_angle = math.degrees(D_A_AA_angle)
             else:
                 D_A_AA_angle = -1
@@ -1020,7 +1166,9 @@ def filterListOfPotentialHBonds(potential_H_bonds):
                 hydrogen_vector = hydrogen_atom.get_vector()
                 acceptor_vector = acceptor_atom.get_vector()
                 acceptor_antecedent_vector = acceptor_antecedent_atom.get_vector()
-                H_A_AA_angle = calc_angle(hydrogen_vector, acceptor_vector, acceptor_antecedent_vector)
+                H_A_AA_angle = calc_angle(
+                    hydrogen_vector, acceptor_vector, acceptor_antecedent_vector
+                )
                 H_A_AA_angle = math.degrees(H_A_AA_angle)
             else:
                 H_A_AA_angle = -1
@@ -1066,7 +1214,9 @@ def getHBondInformation(listOfHBonds):
         # D-A max distance of 3.9
         x2, y2, z2 = donor_atom.get_coord()
         x1, y1, z1 = acceptor_atom.get_coord()
-        dist_between_donor_acceptor = ((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2) ** (1.0 / 2.0)
+        dist_between_donor_acceptor = (
+            (x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2
+        ) ** (1.0 / 2.0)
         currentHBond.append(dist_between_donor_acceptor)
 
         # checks if donor is a oxygen from a water molecule, since there will be no hydrogen atom
@@ -1074,7 +1224,9 @@ def getHBondInformation(listOfHBonds):
             # H-A max distance of 2.5
             x2, y2, z2 = hydrogen_atom.get_coord()
             x1, y1, z1 = acceptor_atom.get_coord()
-            dist_between_hydrogen_acceptor = ((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2) ** (1.0 / 2.0)
+            dist_between_hydrogen_acceptor = (
+                (x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2
+            ) ** (1.0 / 2.0)
             currentHBond.append(dist_between_hydrogen_acceptor)
 
             # D-H-A min angle of 90
@@ -1097,14 +1249,18 @@ def getHBondInformation(listOfHBonds):
 
         # Does not perform these checks on acceptors from water molecules since there are no AA
         if acceptor_hetfield != "W":
-            acceptor_antecedent_atom, founds_status = getAcceptorAntecedent(acceptor_atom)
+            acceptor_antecedent_atom, founds_status = getAcceptorAntecedent(
+                acceptor_atom
+            )
 
             # D-A-AA min angle of 90
             if founds_status > 0:
                 donor_vector = donor_atom.get_vector()
                 acceptor_vector = acceptor_atom.get_vector()
                 acceptor_antecedent_vector = acceptor_antecedent_atom.get_vector()
-                D_A_AA_angle = calc_angle(donor_vector, acceptor_vector, acceptor_antecedent_vector)
+                D_A_AA_angle = calc_angle(
+                    donor_vector, acceptor_vector, acceptor_antecedent_vector
+                )
                 D_A_AA_angle = math.degrees(D_A_AA_angle)
             else:
                 D_A_AA_angle = -1
@@ -1116,7 +1272,9 @@ def getHBondInformation(listOfHBonds):
                 hydrogen_vector = hydrogen_atom.get_vector()
                 acceptor_vector = acceptor_atom.get_vector()
                 acceptor_antecedent_vector = acceptor_antecedent_atom.get_vector()
-                H_A_AA_angle = calc_angle(hydrogen_vector, acceptor_vector, acceptor_antecedent_vector)
+                H_A_AA_angle = calc_angle(
+                    hydrogen_vector, acceptor_vector, acceptor_antecedent_vector
+                )
                 H_A_AA_angle = math.degrees(H_A_AA_angle)
             else:
                 H_A_AA_angle = -1
@@ -1139,7 +1297,6 @@ def getHBondInformation(listOfHBonds):
 # Filter method for the random testing function
 def filterListOfPotentialHBonds_RandomTesting(potential_H_bonds):
     final_list_of_H_Bonds = []
-    count = 0
 
     for pair in potential_H_bonds:
         donor_atom = pair[0]
@@ -1147,7 +1304,9 @@ def filterListOfPotentialHBonds_RandomTesting(potential_H_bonds):
 
         x2, y2, z2 = donor_atom
         x1, y1, z1 = acceptor_atom
-        dist_between_donor_acceptor = ((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2) ** (1.0 / 2.0)
+        dist_between_donor_acceptor = (
+            (x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2
+        ) ** (1.0 / 2.0)
 
         notValidBond = 0
 
@@ -1229,14 +1388,9 @@ def printHBonds_Table(listOfHBonds, listOfHBondInformation, PDB_File):
     file_name = "HBondFinder_" + PDB_code_str + ".txt"
     print("Writing to " + str(file_name) + " ...")
 
-    f = open(file_name, "w+")
-    f.write("<------ DONOR ------><---- ACCEPTOR --------->     D-A    H-A    D-H-A    D-A-AA   H-A-AA\n")
     count = 0
 
-    hbondReport = open("hbonds_" + PDB_code_str + ".txt", "w+")
     listOfAtoms = []
-    num_of_atoms = 0
-    num_of_hbonds = 0
 
     # Iterates through all the hydrogen bonds
     for HBond in listOfHBonds:
@@ -1247,9 +1401,13 @@ def printHBonds_Table(listOfHBonds, listOfHBondInformation, PDB_File):
 
         # Print the Donor, and then Acceptor Information
         donor_resname = donor_atom.get_parent().get_resname()
-        donor_structure_id, donor_model_num, donor_chain_name, donor_residue_info, donor_atom_info = (
-            donor_atom.get_full_id()
-        )
+        (
+            donor_structure_id,
+            donor_model_num,
+            donor_chain_name,
+            donor_residue_info,
+            donor_atom_info,
+        ) = donor_atom.get_full_id()
 
         # Getting the Residue Number
         str_One, donor_residue_num, str_Two = donor_residue_info
@@ -1259,9 +1417,13 @@ def printHBonds_Table(listOfHBonds, listOfHBondInformation, PDB_File):
 
         # Now, lets get the Acceptor Info
         acceptor_resname = acceptor_atom.get_parent().get_resname()
-        acceptor_structure_id, acceptor_model_num, acceptor_chain_name, acceptor_residue_info, acceptor_atom_info = (
-            acceptor_atom.get_full_id()
-        )
+        (
+            acceptor_structure_id,
+            acceptor_model_num,
+            acceptor_chain_name,
+            acceptor_residue_info,
+            acceptor_atom_info,
+        ) = acceptor_atom.get_full_id()
 
         # Getting the Residue Number
         str_One, acceptor_residue_num, str_Two = acceptor_residue_info
@@ -1269,22 +1431,28 @@ def printHBonds_Table(listOfHBonds, listOfHBondInformation, PDB_File):
         # Getting the Atom Name
         acceptor_atom_name, str_Two = acceptor_atom_info
 
-        f.write(
-            str(donor_chain_name).ljust(4)
-            + str(donor_residue_num).ljust(7)
-            + str(donor_resname).ljust(7)
-            + str(donor_atom_name).ljust(7)
-            + str(acceptor_chain_name).ljust(5)
-            + str(acceptor_residue_num).ljust(7)
-            + str(acceptor_resname).ljust(7)
-            + str(acceptor_atom_name).ljust(7)
-            + str("{0:.2f}".format(currentBondInfo[0])).ljust(7)
-            + str("{0:.2f}".format(currentBondInfo[1])).ljust(7)
-            + str("{0:.2f}".format(currentBondInfo[2])).ljust(9)
-            + str("{0:.2f}".format(currentBondInfo[3])).ljust(9)
-            + str("{0:.2f}".format(currentBondInfo[4])).ljust(9)
-            + "\n"
-        )
+        with open(file_name, "w+") as f:
+            f.write(
+                "<------ DONOR ------><---- ACCEPTOR --------->     D-A    H-A    D-H-A    D-A-AA   H-A-AA\n"
+            )
+
+            f.write(
+                str(donor_chain_name).ljust(4)
+                + str(donor_residue_num).ljust(7)
+                + str(donor_resname).ljust(7)
+                + str(donor_atom_name).ljust(7)
+                + str(acceptor_chain_name).ljust(5)
+                + str(acceptor_residue_num).ljust(7)
+                + str(acceptor_resname).ljust(7)
+                + str(acceptor_atom_name).ljust(7)
+                + str("{0:.2f}".format(currentBondInfo[0])).ljust(7)
+                + str("{0:.2f}".format(currentBondInfo[1])).ljust(7)
+                + str("{0:.2f}".format(currentBondInfo[2])).ljust(9)
+                + str("{0:.2f}".format(currentBondInfo[3])).ljust(9)
+                + str("{0:.2f}".format(currentBondInfo[4])).ljust(9)
+                + "\n"
+            )
+            f.close()
         count = count + 1
 
         # Will add atom to list of atoms if not already in it
@@ -1294,46 +1462,51 @@ def printHBonds_Table(listOfHBonds, listOfHBondInformation, PDB_File):
             listOfAtoms.append(acceptor_atom)
 
         # f.write(str(donor_resname) + "  " + str(donor_residue_num) + "  " + str(donor_atom_name) + "     " + str(acceptor_resname) + "  " + str(acceptor_residue_num) + "  " + str(acceptor_atom_name) + "\n")
-    f.close()
 
-    # Iterates through hydrogen bonds and write input file for graph neural network
-    hbondReport.write("#NUMBER_OF_ATOMS " + str(len(listOfAtoms)) + "\n")
-    index = 0
-    for atom in listOfAtoms:
-        structure_id, model_num, chain_name, residue_info, atom_info = atom.get_full_id()
+    with open("hbonds_" + PDB_code_str + ".txt", "w+") as hbondReport:
+        # Iterates through hydrogen bonds and write input file for graph neural network
+        hbondReport.write("#NUMBER_OF_ATOMS " + str(len(listOfAtoms)) + "\n")
 
-        # Extract key info to print in file
-        str_One, residue_num, str_Two = residue_info
-        atom_resname = atom.get_parent().get_resname()
-        atom_name = atom.get_id()
-        x_coord, y_coord, z_coord = atom.get_coord()
-        atom_serialNum = atom.get_serial_number()
+        index = 0
+        for atom in listOfAtoms:
+            structure_id, model_num, chain_name, residue_info, atom_info = (
+                atom.get_full_id()
+            )
 
-        hbondReport.write(
-            str(chain_name).ljust(5)
-            + str(atom_resname).ljust(5)
-            + str(residue_num).ljust(7)
-            + str(atom_name).ljust(5)
-            + str(index).ljust(5)
-            + str(x_coord).ljust(9)
-            + str(y_coord).ljust(9)
-            + str(z_coord).ljust(9)
-            + str(atom_serialNum).ljust(7)
-            + "\n"
-        )
-        index = index + 1
+            # Extract key info to print in file
+            str_One, residue_num, str_Two = residue_info
+            atom_resname = atom.get_parent().get_resname()
+            atom_name = atom.get_id()
+            x_coord, y_coord, z_coord = atom.get_coord()
+            atom_serialNum = atom.get_serial_number()
 
-    # List all hydrogen bonds to file
-    hbondReport.write("#NUMBER_OF_HBONDS " + str(len(listOfHBonds)) + "\n")
-    for HBond in listOfHBonds:
-        Donor_Hydrogen_Pair, acceptor_atom = HBond
-        donor_atom = Donor_Hydrogen_Pair[0]
+            hbondReport.write(
+                str(chain_name).ljust(5)
+                + str(atom_resname).ljust(5)
+                + str(residue_num).ljust(7)
+                + str(atom_name).ljust(5)
+                + str(index).ljust(5)
+                + str(x_coord).ljust(9)
+                + str(y_coord).ljust(9)
+                + str(z_coord).ljust(9)
+                + str(atom_serialNum).ljust(7)
+                + "\n"
+            )
+            index = index + 1
 
-        donor_index = listOfAtoms.index(donor_atom)
-        acceptor_index = listOfAtoms.index(acceptor_atom)
+        # List all hydrogen bonds to file
+        hbondReport.write("#NUMBER_OF_HBONDS " + str(len(listOfHBonds)) + "\n")
+        for HBond in listOfHBonds:
+            Donor_Hydrogen_Pair, acceptor_atom = HBond
+            donor_atom = Donor_Hydrogen_Pair[0]
 
-        hbondReport.write(str(donor_index).ljust(6) + str(acceptor_index).ljust(6) + "\n")
-    hbondReport.close()
+            donor_index = listOfAtoms.index(donor_atom)
+            acceptor_index = listOfAtoms.index(acceptor_atom)
+
+            hbondReport.write(
+                str(donor_index).ljust(6) + str(acceptor_index).ljust(6) + "\n"
+            )
+        hbondReport.close()
 
 
 def usageMethod():
@@ -1344,15 +1517,23 @@ def usageMethod():
     print("         -h, --help")
     print("                 Prints usage message for this program and various options.")
     print("         -i FILE, --input FILE")
-    print("                 File with atomic coordinates (should already include hydrogen positions)")
+    print(
+        "                 File with atomic coordinates (should already include hydrogen positions)"
+    )
     print("         -w, --warning")
-    print("                 Prints out all warnings encountered during program execution.")
+    print(
+        "                 Prints out all warnings encountered during program execution."
+    )
     print("         -j FILE, --json FILE")
     print("                 JSON file that encodes the naming scheme for hydrogens.")
     print("         -d double, --dimension double")
-    print("                 Box dimension used for building lattice structure (Default is 4.0 A)")
+    print(
+        "                 Box dimension used for building lattice structure (Default is 4.0 A)"
+    )
     print("         -b batching_dir_str, --batchingDir batching_dir_str")
-    print("                 Allows user to specify directory containing PDB files to be run through program.")
+    print(
+        "                 Allows user to specify directory containing PDB files to be run through program."
+    )
 
 
 # End of Helper Methods ---------------------------------------------------
@@ -1375,13 +1556,17 @@ def queryBox_UnitTest1(listOfHBonds, donor_hydrogen_list, lattice_dimensions):
                 # Gets coordinates and calculates distance
                 x2, y2, z2 = donor_atom.get_coord()
                 x1, y1, z1 = acceptor_atom.get_coord()
-                distance = ((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2) ** (1.0 / 2.0)
+                distance = ((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2) ** (
+                    1.0 / 2.0
+                )
 
                 if distance <= 3.90 and distance > 0:
                     H_Bond_List.append([donor_pair, acceptor_atom])
 
     # Makes sure both lists are subsets of each other, proving equality
-    return all(elem in H_Bond_List for elem in listOfHBonds) and all(elem in listOfHBonds for elem in H_Bond_List)
+    return all(elem in H_Bond_List for elem in listOfHBonds) and all(
+        elem in listOfHBonds for elem in H_Bond_List
+    )
 
 
 # Goes through each box in lattice and makes sure that each atom in there
@@ -1403,13 +1588,19 @@ def buildGrid_UnitTest1(grid, lattice_dimensions, min_coordinates):
                     z_coord_pos = adjust_z_coord_to_Grid_General(z_coord, z_min_coord)
 
                     # Check that the coordinates are within the correct range
-                    if x_coord_pos < (x * BOX_DIMENSION) or x_coord_pos > ((x + 1) * BOX_DIMENSION):
+                    if x_coord_pos < (x * BOX_DIMENSION) or x_coord_pos > (
+                        (x + 1) * BOX_DIMENSION
+                    ):
                         notValid = True
 
-                    if y_coord_pos < (y * BOX_DIMENSION) or y_coord_pos > ((y + 1) * BOX_DIMENSION):
+                    if y_coord_pos < (y * BOX_DIMENSION) or y_coord_pos > (
+                        (y + 1) * BOX_DIMENSION
+                    ):
                         notValid = True
 
-                    if z_coord_pos < (z * BOX_DIMENSION) or z_coord_pos > ((z + 1) * BOX_DIMENSION):
+                    if z_coord_pos < (z * BOX_DIMENSION) or z_coord_pos > (
+                        (z + 1) * BOX_DIMENSION
+                    ):
                         notValid = True
     return notValid
 
@@ -1466,8 +1657,12 @@ def randomizedTestingForBuildGrid_queryBox():
         # print(lattice_dimensions)
         start = time.time()
         # Build Lattice of Coordinates
-        testGrid = grid = [[] for i in range(int(xBoxDimension * yBoxDimension * zBoxDimension))]
-        testGrid = buildGrid_RandomTesting(list_of_coords, testGrid, box_dimension, lattice_dimensions)
+        testGrid = grid = [
+            [] for i in range(int(xBoxDimension * yBoxDimension * zBoxDimension))
+        ]
+        testGrid = buildGrid_RandomTesting(
+            list_of_coords, testGrid, box_dimension, lattice_dimensions
+        )
 
         # Now lets query
         potentialHBonds = queryBox_RandomTesting(
@@ -1539,13 +1734,17 @@ def specificTestingForBuildGrid_queryBox():
                 x2, y2, z2 = atom2
                 x1, y1, z1 = atom1
 
-                distance = ((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2) ** (1.0 / 2.0)
+                distance = ((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2) ** (
+                    1.0 / 2.0
+                )
                 if distance <= 3.90:
                     final_list.append([atom1, atom2])
     # print(len(HBondsList))
     # print(len(final_list))
 
-    return all(elem in final_list for elem in HBondsList) and all(elem in HBondsList for elem in final_list)
+    return all(elem in final_list for elem in HBondsList) and all(
+        elem in HBondsList for elem in final_list
+    )
 
 
 def testingSingleBoxSize(PDB_File, BOX_DIMENSION):
@@ -1577,9 +1776,16 @@ def testingSingleBoxSize(PDB_File, BOX_DIMENSION):
 
     start = time.time()
     # Builds the Lattice with the acceptor atoms and querys on all donor atoms
-    testGrid = buildGrid_DifferentSizes(acceptor_list, testGrid, BOX_DIMENSION, lattice_dimensions, min_coordinates)
+    testGrid = buildGrid_DifferentSizes(
+        acceptor_list, testGrid, BOX_DIMENSION, lattice_dimensions, min_coordinates
+    )
     listOfPotentialHBonds = queryBox_DifferentSizes(
-        testGrid, donor_hydrogen_list, BOX_DIMENSION, lattice_dimensions, min_coordinates, gridDimensions
+        testGrid,
+        donor_hydrogen_list,
+        BOX_DIMENSION,
+        lattice_dimensions,
+        min_coordinates,
+        gridDimensions,
     )
     end = time.time()
 
@@ -1629,17 +1835,26 @@ def testingDifferentBoxSizes(PDB_File, count):
 
         start = time.time()
         # Builds the Lattice with the acceptor atoms
-        testGrid = buildGrid_DifferentSizes(acceptor_list, testGrid, BOX_DIMENSION, lattice_dimensions, min_coordinates)
+        testGrid = buildGrid_DifferentSizes(
+            acceptor_list, testGrid, BOX_DIMENSION, lattice_dimensions, min_coordinates
+        )
 
         listOfPotentialHBonds = queryBox_DifferentSizes(
-            testGrid, donor_hydrogen_list, BOX_DIMENSION, lattice_dimensions, min_coordinates, gridDimensions
+            testGrid,
+            donor_hydrogen_list,
+            BOX_DIMENSION,
+            lattice_dimensions,
+            min_coordinates,
+            gridDimensions,
         )
         end = time.time()
         listOfHBonds = filterListOfPotentialHBonds(listOfPotentialHBonds)
 
         elapsed_time = (end - start) * (10000)
         sheet1.write(count, (i + 1), str(elapsed_time))
-        print("Dimension:  " + str(BOX_DIMENSION) + "  Time Elapsed: " + str(end - start))
+        print(
+            "Dimension:  " + str(BOX_DIMENSION) + "  Time Elapsed: " + str(end - start)
+        )
 
 
 def testingVariousPDBFiles(batching_dir, BOX_DIMENSION):
@@ -1674,7 +1889,9 @@ batching_mode = False
 
 # Parses the command-line options
 options, remainder = getopt.getopt(
-    sys.argv[1:], "hi:wj:d:b:", ["help", "input=", "json=", "warnings", "dimension=", "batchingDir="]
+    sys.argv[1:],
+    "hi:wj:d:b:",
+    ["help", "input=", "json=", "warnings", "dimension=", "batchingDir="],
 )
 for opt, arg in options:
     if opt in ("-h", "--help"):

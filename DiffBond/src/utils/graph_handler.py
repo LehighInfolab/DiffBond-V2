@@ -8,7 +8,6 @@ Main functions:
 - visualize_graph: Visualize and save graph plots
 """
 
-
 import numpy as np
 import pandas as pd
 import networkx as nx
@@ -61,22 +60,98 @@ def write_index_edge_mapping(index: Optional[Dict], edges: Optional[List], name:
     output_file_path = output_dir / (name + "_edges.txt")
 
     if index is None or edges is None:
-        with open(output_file_path, "w") as f:
+        with open(output_file_path, "w", encoding="utf-8") as f:
             f.write("")
         return
 
     # Convert data to DataFrames for easy CSV writing
     nodes_df = pd.DataFrame(list(index.items()), columns=["Node", "Index"])
-    edges_df = pd.DataFrame(edges, columns=["Source", "Target"])
+    # Allow optional third value (Distance) in edges
+    if len(edges) > 0 and isinstance(edges[0], (list, tuple)) and len(edges[0]) == 3:
+        edges_df = pd.DataFrame(edges, columns=["Source", "Target", "Distance"])
+    else:
+        edges_df = pd.DataFrame(edges, columns=["Source", "Target"])
 
     try:
-        with open(output_file_path, "w") as f:
+        with open(output_file_path, "w", encoding="utf-8") as f:
             # f.write("# Node to Index Mapping\n")
             nodes_df.to_csv(f, index=False)
             # f.write("\n# Edges\n")
             edges_df.to_csv(f, index=False)
     except Exception as error:
         raise error
+
+
+def write_graphs_from_edge_dict(edge_dict: Dict[str, List[Any]], output_dir: Path) -> None:
+    """Write graph files for each entry in an edge_dict.
+
+    edge_dict maps interaction name -> [index, edges, raw_edges].
+    This helper writes one file per interaction using write_index_edge_mapping.
+    """
+    if not edge_dict:
+        return
+    for edge_type, payload in edge_dict.items():
+        if not isinstance(payload, (list, tuple)) or len(payload) < 2:
+            continue
+        idx, elist = payload[0], payload[1]
+        write_index_edge_mapping(idx, elist, edge_type, output_dir)
+
+
+def write_intra_contact_edges(
+    edges: List[Tuple[int, int, float]], contact_index: Dict[int, Any], output_dir: Path, filename: str
+) -> Optional[Path.Path]:
+    """Write precomputed intramolecular contact edge triplets to output_dir/filename.
+
+    Writes nodes and edges in the same format as other graph files:
+    - Node section: Node,Index mapping
+    - Edge section: Source,Target,Distance
+
+    Args:
+        edges: List of edge triplets (source_index, target_index, distance)
+        contact_index: Dictionary mapping node indices to atom/residue information
+        output_dir: Directory to write output file
+        filename: Name of output file
+
+    Returns:
+        Path to written file or None if writing fails
+    """
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        out_file = output_dir / filename
+
+        if not edges:
+            with open(out_file, "w", encoding="utf-8") as f:
+                f.write("")
+            return out_file
+
+        # Extract unique node indices from edges
+        node_indices = set()
+        for source, target, _ in edges:
+            node_indices.add(source)
+            node_indices.add(target)
+
+        # Create filtered node index dictionary containing only nodes present in edges
+        # Sort by index to ensure consistent ordering
+        filtered_index = {idx: contact_index[idx] for idx in sorted(node_indices) if idx in contact_index}
+
+        # Convert to DataFrame using same pattern as write_index_edge_mapping
+        nodes_df = pd.DataFrame(list(filtered_index.items()), columns=["Node", "Index"])
+        edges_df = pd.DataFrame(edges, columns=["Source", "Target", "Distance"])
+
+        with open(out_file, "w", encoding="utf-8") as f:
+            nodes_df.to_csv(f, index=False)
+            edges_df.to_csv(f, index=False)
+
+        return out_file
+    except Exception:
+        return None
+
+
+def write_edge_triplets(edges: List[Tuple[int, int, float]], out_file_path: Path.Path) -> None:
+    """Write indexed triplet edges (i, j, d) to a TSV file."""
+    with open(out_file_path, "w") as _of:
+        for i, j, d in edges:
+            _of.write(f"{i}\t{j}\t{d:.4f}\n")
 
 
 def _process_hbond_node(G: nx.Graph, edge: List, node_idx: int, pos: Dict, color: Dict) -> None:
@@ -92,11 +167,7 @@ def _process_hbond_node(G: nx.Graph, edge: List, node_idx: int, pos: Dict, color
     node_name = f"{edge[node_idx][0]}_{edge[node_idx][1]}_{edge[node_idx][2]}"
 
     # Add node attributes
-    G.nodes[node_name].update({
-        "AA": edge[node_idx][2],
-        "coord": edge[node_idx][3],
-        "chain": edge[node_idx][0]
-    })
+    G.nodes[node_name].update({"AA": edge[node_idx][2], "coord": edge[node_idx][3], "chain": edge[node_idx][0]})
 
     # Handle hbond attribute
     hbond_val = G.nodes[node_name].get("hbond")

@@ -8,10 +8,12 @@ Main functions:
 """
 
 import os
+import logging
 import subprocess
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional
 
+logger = logging.getLogger(__name__)
 
 """
 This file contains some utility functions for working with hbondfinder format
@@ -30,7 +32,7 @@ def get_project_root() -> Path:
     return Path(__file__).parent.parent.parent
 
 
-def run_hbondfinder(file: Path|str) -> bool:
+def run_hbondfinder(file: Path | str) -> bool:
     """Run HBondFinder on an input PDB file.
 
     Uses acceptors_donors_dict.json as mapping for amino acids to acceptor/donor atoms.
@@ -53,7 +55,7 @@ def run_hbondfinder(file: Path|str) -> bool:
         return False
 
     root_dir = get_project_root()
-    print(root_dir)
+
     hbondfinder_script = root_dir / "src" / "scripts" / "hbondfinder.py"
     json_file = root_dir / "src" / "JSON_Files" / "acceptors_donors_dict.json"
 
@@ -62,13 +64,8 @@ def run_hbondfinder(file: Path|str) -> bool:
     if not json_file.exists():
         raise FileNotFoundError(f"Acceptors/donors JSON file not found at {json_file}")
 
-    print(f"Running hbondfinder.py on {file.name}...")
-    command = [
-        "python",
-        str(hbondfinder_script),
-        "-i", str(file),
-        "-j", str(json_file)
-    ]
+    command = ["python", str(hbondfinder_script), "-i", str(file), "-j", str(json_file)]
+    logger.info(f"Running hbondfinder.py on {file.name} using command ' {command} ' ...")
     subprocess.run(command, check=True)
     return True
 
@@ -96,7 +93,20 @@ def parse_hbond_lines(lines: List[List[str]], intermolecular: bool = False) -> L
     return edges
 
 
-def parse_hblines_file(file_path: Path) -> Tuple[Dict[int, List[str]], List[Tuple[int, int]]]:
+def cleanup_temp_outputs() -> None:
+    """HBondFinder temp output files in CWD."""
+    try:
+        for fname in ("HBondFinder_temp.txt", "hbonds_temp.txt"):
+            if os.path.isfile(fname):
+                Path(fname).unlink()
+    except Exception:
+        # Silently ignore cleanup errors
+        pass
+
+
+def parse_hblines_file(
+    file_path: Path,
+) -> Tuple[Dict[int, List[str]], List[Tuple[int, int]]]:
     """Parse a HBondFinder output file into atom and edge data.
 
     Args:
@@ -126,17 +136,17 @@ def parse_hblines_file(file_path: Path) -> Tuple[Dict[int, List[str]], List[Tupl
             for i in range(1, num_atoms + 1):
                 fields = lines[i].split()
                 atom_info = [
-                    "ATOM",          # Record type
-                    fields[4],       # Atom serial number
-                    fields[3],       # Atom name
-                    fields[1],       # Residue name
-                    fields[0],       # Chain ID
-                    fields[2],       # Residue number
-                    fields[5],       # x coordinate
-                    fields[6],       # y coordinate
-                    fields[7],       # z coordinate
-                    "1.00",         # Occupancy
-                    "0.00"          # Temperature factor
+                    "ATOM",  # Record type
+                    fields[4],  # Atom serial number
+                    fields[3],  # Atom name
+                    fields[1],  # Residue name
+                    fields[0],  # Chain ID
+                    fields[2],  # Residue number
+                    fields[5],  # x coordinate
+                    fields[6],  # y coordinate
+                    fields[7],  # z coordinate
+                    "1.00",  # Occupancy
+                    "0.00",  # Temperature factor
                 ]
                 atom_index[int(fields[4])] = atom_info
 
@@ -154,8 +164,7 @@ def parse_hblines_file(file_path: Path) -> Tuple[Dict[int, List[str]], List[Tupl
 
 
 def edges_with_atom_details(
-    atom_index: Dict[int, List[str]],
-    edge_list: List[Tuple[int, int]]
+    atom_index: Dict[int, List[str]], edge_list: List[Tuple[int, int]]
 ) -> List[Tuple[List[str], List[str]]]:
     """Convert edge list to detailed format including atom information.
 

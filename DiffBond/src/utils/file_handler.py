@@ -7,9 +7,9 @@ Main functions:
 - make_output_dir: Create output directory for results
 """
 
-import os
 from pathlib import Path
 from typing import List, Dict, Union
+import shutil
 
 
 def parse_PDB_file(file: Union[str, Path]) -> List[List[str]]:
@@ -29,22 +29,22 @@ def parse_PDB_file(file: Union[str, Path]) -> List[List[str]]:
         all_lines = []
         for line in atom_lines:
             parsed_line = [
-            line[0:6].strip(),  # Record name
-            line[6:11].strip(),  # Atom serial number
-            line[12:16].strip(),  # Atom name
-            # line[16].strip(),  # Alternate location indicator
-            line[17:20].strip(),  # Residue name
-            line[21].strip(),  # Chain identifier
-            line[22:26].strip(),  # Residue sequence number
-            # line[26].strip(),  # Code for insertion of residues
-            line[30:38].strip(),  # x coordinate
-            line[38:46].strip(),  # y coordinate
-            line[46:54].strip(),  # z coordinate
-            line[54:60].strip(),  # Occupancy
-            line[60:66].strip(),  # Temperature factor
-            line[76:78].strip(),  # Element symbol
-            # line[78:80].strip(),  # Charge
-        ]
+                line[0:6].strip(),  # Record name
+                line[6:11].strip(),  # Atom serial number
+                line[12:16].strip(),  # Atom name
+                # line[16].strip(),  # Alternate location indicator
+                line[17:20].strip(),  # Residue name
+                line[21].strip(),  # Chain identifier
+                line[22:26].strip(),  # Residue sequence number
+                # line[26].strip(),  # Code for insertion of residues
+                line[30:38].strip(),  # x coordinate
+                line[38:46].strip(),  # y coordinate
+                line[46:54].strip(),  # z coordinate
+                line[54:60].strip(),  # Occupancy
+                line[60:66].strip(),  # Temperature factor
+                line[76:78].strip(),  # Element symbol
+                # line[78:80].strip(),  # Charge
+            ]
 
             # Standardize 4-character residue names
             if len(parsed_line[3]) == 4:
@@ -56,8 +56,6 @@ def parse_PDB_file(file: Union[str, Path]) -> List[List[str]]:
 
     except Exception as e:
         raise RuntimeError(f"Error parsing PDB file {file}: {str(e)}")
-
-
 
 
 def write_PDB(output_name: str, append: bool, atoms_list: List[List[str]]) -> None:
@@ -131,3 +129,73 @@ def make_chain_comb_dir(output_file_name: str, chains: List[str]) -> str:
     chain_dir = Path("Results") / output_file_name / f"{chains[0]}_{chains[1]}"
     chain_dir.mkdir(parents=True, exist_ok=True)
     return str(chain_dir)
+
+
+def pretty_distance(d: float) -> str:
+    """Convert a float distance to a compact string form for filenames.
+
+    Examples:
+        2.5 -> "2p5"
+        3.0 -> "3"
+
+    Args:
+        d: Distance value
+
+    Returns:
+        Compact string representation
+    """
+    s = f"{d:.2f}".rstrip("0").rstrip(".")
+    return s.replace(".", "p")
+
+
+def generate_output_name(input_files: List[Path], distance: float, default_distance: float) -> str:
+    """Generate a default results folder name from input files and distance.
+
+    Args:
+        input_files: List of input PDB file paths
+        distance: Distance threshold used
+        default_distance: Default distance threshold to check against
+
+    Returns:
+        Output directory name
+    """
+    parts = ["Result"]
+    parts.extend(f"{f.stem}" for f in input_files)
+
+    # Append non-default distance to differentiate runs
+    if distance != default_distance:
+        parts.append(pretty_distance(distance) + "A")
+    return "_".join(parts)
+
+
+def setup_results_directories(output_name: str) -> tuple[Path, Path]:
+    """Create Results/<output_name>/ and subdirectories for PDBs.
+
+    Args:
+        output_name: Name for the output directory
+
+    Returns:
+        Tuple of (results_dir, pdb_dir)
+    """
+    results_dir = Path("Results") / output_name
+    pdb_dir = results_dir / "pdb"
+
+    results_dir.mkdir(parents=True, exist_ok=True)
+    pdb_dir.mkdir(parents=True, exist_ok=True)
+
+    return results_dir, pdb_dir
+
+
+def copy_input_files(input_files: List[Path], pdb_dir: Path) -> None:
+    """Copy the original input PDBs into the results folder for recordkeeping.
+
+    Args:
+        input_files: List of input PDB file paths
+        pdb_dir: Destination directory for copied files
+    """
+    for i, file in enumerate(input_files, 1):
+        dest = pdb_dir / f"{i}.pdb"
+        try:
+            shutil.copy(file, dest)
+        except Exception as e:
+            print(f"Warning: Failed to copy {file} to {dest}: {e}")
