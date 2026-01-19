@@ -40,6 +40,30 @@ CATIONIC_ATOMS: Dict[str, List[str]] = {
     "HIS": ["ND1", "NE2"],  # Both can be protonated
 }
 
+# Amino acid single-letter to three-letter code mapping
+SINGLE_TO_THREE_LETTER: Dict[str, str] = {
+    "A": "ALA",
+    "R": "ARG",
+    "N": "ASN",
+    "D": "ASP",
+    "C": "CYS",
+    "Q": "GLN",
+    "E": "GLU",
+    "G": "GLY",
+    "H": "HIS",
+    "I": "ILE",
+    "L": "LEU",
+    "K": "LYS",
+    "M": "MET",
+    "F": "PHE",
+    "P": "PRO",
+    "S": "SER",
+    "T": "THR",
+    "W": "TRP",
+    "Y": "TYR",
+    "V": "VAL",
+}
+
 PDB_COORDINATE_INDICES = {"x": 6, "y": 7, "z": 8}
 
 # Common molecular measurements and thresholds

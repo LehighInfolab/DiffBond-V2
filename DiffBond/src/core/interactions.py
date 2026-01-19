@@ -11,7 +11,6 @@ criteria:
 
     - Contact (c_mode): generic atom contacts within a distance cutoff
     - Ionic (i_mode): electrostatically defined ionic bonds
-    - Adjacent (a_mode): atoms adjacent to an existing bond set
     - Cation–π (p_mode): interactions between cations and aromatic rings
     - Salt bridge (s_mode): combined ionic + hydrogen bond pairs
     - Hydrogen bond (h_mode): pre-filter then HBondFinder analysis
@@ -21,45 +20,21 @@ All modes return a consistent tuple structure
 which can be used downstream to build graphs or perform further analysis.
 """
 
-import os
 from pathlib import Path
 import shutil
 import tempfile
 import logging
-from typing import List, Tuple, Optional, Any, Dict
+from math import sqrt
+from typing import List, Tuple, Optional, Any, Dict, Union
 
 import src.utils.file_handler as file_handler
 import src.core.hbondfinder_handler as hbondfinder_handler
 import src.utils.distance as distance
 from src.utils.graph_handler import convert_to_indexed_edge_list
+from src.utils.residue_handler import build_residue_index, residue_key, build_residue_atoms
+from src.utils.distance import centroid_of
 
 logger = logging.getLogger(__name__)
-
-
-def _residue_key(atom: List[str]) -> Tuple[str, str, str]:
-    """Return a unique residue identifier (chain, resSeq, resName)."""
-    # atom indices: [.., resName(3), atomName(2), chain(4), resSeq(5), x(6), y(7), z(8) ...]
-    return atom[4], atom[5], atom[3]
-
-
-def _build_residue_atoms(points: List[List[str]]) -> Dict[Tuple[str, str, str], List[List[str]]]:
-    by_res: Dict[Tuple[str, str, str], List[List[str]]] = {}
-    for a in points:
-        key = _residue_key(a)
-        by_res.setdefault(key, []).append(a)
-    return by_res
-
-
-def _centroid(coords: List[Tuple[float, float, float]]) -> Tuple[float, float, float]:
-    import numpy as np
-
-    arr = np.array(coords, dtype=float)
-    c = arr.mean(axis=0)
-    return float(c[0]), float(c[1]), float(c[2])
-
-
-def _coords(atom: List[str]) -> Tuple[float, float, float]:
-    return float(atom[6]), float(atom[7]), float(atom[8])
 
 
 def c_mode(
@@ -101,13 +76,13 @@ def c_mode(
         return atom_index, edge_list_with_d, contact_edges
 
     # residue-level aggregation
-    res_atoms1 = _build_residue_atoms(PDB_data[0])
-    res_atoms2 = _build_residue_atoms(PDB_data[1])
+    res_atoms1 = build_residue_atoms(PDB_data[0])
+    res_atoms2 = build_residue_atoms(PDB_data[1])
 
     # group atom pairs by residue pair
     grouped: Dict[Tuple[Tuple[str, str, str], Tuple[str, str, str]], List[Tuple[List[str], List[str]]]] = {}
     for a1, a2 in contact_edges:
-        k = (_residue_key(a1), _residue_key(a2))
+        k = (residue_key(a1), residue_key(a2))
         grouped.setdefault(k, []).append((a1, a2))
 
     # compute residue-residue distance per strategy
@@ -117,34 +92,18 @@ def c_mode(
             dvals = [distance.euclidean_distance(a1, a2) for (a1, a2) in pairs]
             dval = sum(dvals) / len(dvals)
         else:  # centroid
-            c1 = _centroid([_coords(a) for a in res_atoms1[r1]])
-            c2 = _centroid([_coords(a) for a in res_atoms2[r2]])
-            # Build pseudo-atoms with centroid coordinates in the expected format positions
-            # Just reuse first atom as template for euclidean distance function by injecting coords
-            # but easier: compute directly
-            from math import sqrt
-
+            c1 = centroid_of(res_atoms1[r1])
+            c2 = centroid_of(res_atoms2[r2])
+            # Compute distance between centroids directly
             dval = sqrt((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2 + (c1[2] - c2[2]) ** 2)
         residue_edges.append((r1, r2, dval))
 
-    # index residues
-    res_index: Dict[int, Tuple[str, str, str]] = {}
-    inv_map: Dict[Tuple[str, str, str], int] = {}
-    current = 0
-    for r1, r2, _ in residue_edges:
-        if r1 not in inv_map:
-            inv_map[r1] = current
-            res_index[current] = r1
-            current += 1
-        if r2 not in inv_map:
-            inv_map[r2] = current
-            res_index[current] = r2
-            current += 1
-    edge_list_with_d = [(inv_map[r1], inv_map[r2], d) for (r1, r2, d) in residue_edges]
+    # index residues - include ALL variants (100, 100a, 100b) as separate nodes
+    res_index, edge_list_with_d, canonical_residue_edges = build_residue_index(residue_edges)
 
     if verbose:
         logger.debug("--- CONTACT residue edges (with distances) ---\n%s", edge_list_with_d)
-    return res_index, edge_list_with_d, residue_edges
+    return res_index, edge_list_with_d, canonical_residue_edges
 
 
 def i_mode(
@@ -169,15 +128,23 @@ def i_mode(
 
     if node_level == "atom":
         atom_index, edge_list = convert_to_indexed_edge_list(ionic_edges)
+        # Augment edge list with distances
+        inv_map: Dict[Tuple, int] = {tuple(atom): idx for idx, atom in atom_index.items()}
+        edge_list_with_d = []
+        for a1, a2 in ionic_edges:
+            i = inv_map[tuple(a1)]
+            j = inv_map[tuple(a2)]
+            d = distance.euclidean_distance(a1, a2)
+            edge_list_with_d.append((i, j, d))
         if verbose:
             logger.debug("--- IONIC atom index ---\n%s", atom_index)
-            logger.debug("--- IONIC edges ---\n%s", edge_list)
-        return atom_index, edge_list, ionic_edges
+            logger.debug("--- IONIC edges (with distances) ---\n%s", edge_list_with_d)
+        return atom_index, edge_list_with_d, ionic_edges
 
     # residue-level: choose distance from actual relevant atom pair (min over pairs)
     grouped: Dict[Tuple[Tuple[str, str, str], Tuple[str, str, str]], List[Tuple[List[str], List[str]]]] = {}
     for a1, a2 in ionic_edges:
-        k = (_residue_key(a1), _residue_key(a2))
+        k = (residue_key(a1), residue_key(a2))
         grouped.setdefault(k, []).append((a1, a2))
 
     residue_edges: List[Tuple[Tuple[str, str, str], Tuple[str, str, str], float]] = []
@@ -185,55 +152,12 @@ def i_mode(
         dmin = min(distance.euclidean_distance(a1, a2) for (a1, a2) in pairs)
         residue_edges.append((r1, r2, dmin))
 
-    res_index: Dict[int, Tuple[str, str, str]] = {}
-    inv_map: Dict[Tuple[str, str, str], int] = {}
-    current = 0
-    for r1, r2, _ in residue_edges:
-        if r1 not in inv_map:
-            inv_map[r1] = current
-            res_index[current] = r1
-            current += 1
-        if r2 not in inv_map:
-            inv_map[r2] = current
-            res_index[current] = r2
-            current += 1
-    edge_list_with_d = [(inv_map[r1], inv_map[r2], d) for (r1, r2, d) in residue_edges]
+    # index residues - include ALL variants (100, 100a, 100b) as separate nodes
+    res_index, edge_list_with_d, canonical_residue_edges = build_residue_index(residue_edges)
 
     if verbose:
         logger.debug("--- IONIC residue edges (min atom distance) ---\n%s", edge_list_with_d)
-    return res_index, edge_list_with_d, residue_edges
-
-
-def a_mode(PDB_data: List[Any], dist: float, bonds: List[Any], verbose: bool = False):
-    """
-    Detect atoms adjacent to an existing set of bonds.
-
-    Args:
-        PDB_data (list): Two parsed PDB chain/dataset objects.
-        dist (float): Cutoff distance in Å.
-        bonds (list): List of existing edges/bonds to compare against.
-        verbose (bool): If True, log details of adjacent edges.
-
-    Returns:
-        tuple: (atom_index, edge_list, adj_edges)
-    """
-    logger.info("Searching contacts adjacent to bonds (%.2f Å)...", dist)
-    # Use nearby-contacts utility to expand around the supplied bond endpoints
-    adj_edges = distance.find_nearby_contacts(bonds, PDB_data[0], PDB_data[1], dist)
-
-    # Index and attach distances like contact mode (atom-level)
-    atom_index, edge_list = convert_to_indexed_edge_list(adj_edges)
-    inv_map: Dict[Tuple, int] = {tuple(atom): idx for idx, atom in atom_index.items()}
-    edge_list_with_d = []
-    for a1, a2 in adj_edges:
-        i = inv_map[tuple(a1)]
-        j = inv_map[tuple(a2)]
-        d = distance.euclidean_distance(a1, a2)
-        edge_list_with_d.append((i, j, d))
-
-    if verbose:
-        logger.debug("--- ADJACENT edges (with distances) ---\n%s", edge_list_with_d)
-    return atom_index, edge_list_with_d, adj_edges
+    return res_index, edge_list_with_d, canonical_residue_edges
 
 
 def p_mode(
@@ -297,7 +221,7 @@ def p_mode(
     # residue-level: choose distance from actual relevant atom pair (min over pairs)
     grouped: Dict[Tuple[Tuple[str, str, str], Tuple[str, str, str]], List[Tuple[List[str], List[str]]]] = {}
     for a1, a2 in cation_pi_edges:
-        k = (_residue_key(a1), _residue_key(a2))
+        k = (residue_key(a1), residue_key(a2))
         grouped.setdefault(k, []).append((a1, a2))
 
     residue_edges: List[Tuple[Tuple[str, str, str], Tuple[str, str, str], float]] = []
@@ -305,26 +229,19 @@ def p_mode(
         dmin = min(distance.euclidean_distance(a1, a2) for (a1, a2) in pairs)
         residue_edges.append((r1, r2, dmin))
 
-    res_index: Dict[int, Tuple[str, str, str]] = {}
-    inv_map: Dict[Tuple[str, str, str], int] = {}
-    current = 0
-    for r1, r2, _ in residue_edges:
-        if r1 not in inv_map:
-            inv_map[r1] = current
-            res_index[current] = r1
-            current += 1
-        if r2 not in inv_map:
-            inv_map[r2] = current
-            res_index[current] = r2
-            current += 1
-    edge_list_with_d = [(inv_map[r1], inv_map[r2], d) for (r1, r2, d) in residue_edges]
+    # index residues - include ALL variants (100, 100a, 100b) as separate nodes
+    res_index, edge_list_with_d, canonical_residue_edges = build_residue_index(residue_edges)
 
     if verbose:
         logger.debug("--- CATION-π residue edges (min atom distance) ---\n%s", edge_list_with_d)
-    return res_index, edge_list_with_d, residue_edges
+    return res_index, edge_list_with_d, canonical_residue_edges
 
 
-def s_mode(ionic_edges: List[Any], hbond_edges: List[Any], verbose: bool = False):
+def s_mode(
+    ionic_edges: List[Any],
+    hbond_edges: List[Any],
+    verbose: bool = False,
+):
     """
     Detect salt bridges as overlapping ionic and hydrogen-bond interactions.
 
@@ -363,26 +280,28 @@ def s_mode(ionic_edges: List[Any], hbond_edges: List[Any], verbose: bool = False
         saltbridge_i_edges = [ionic_map[k] for k in common_pairs]
         saltbridge_h_edges = [hbond_map[k] for k in common_pairs]
 
-        # Build residue indices
-        res_index: Dict[int, Tuple[str, str, str]] = {}
-        current = 0
-        for r1, r2, _ in saltbridge_i_edges + saltbridge_h_edges:
-            if r1 not in res_index.values():
-                res_index[current] = r1
-                current += 1
-            if r2 not in res_index.values():
-                res_index[current] = r2
-                current += 1
-
+        # Build residue indices - include ALL variants (100, 100a, 100b) as separate nodes
+        # Combine both edge lists to get the index, then map each list separately
+        combined_edges = saltbridge_i_edges + saltbridge_h_edges
+        res_index, _, canonical_combined_edges = build_residue_index(combined_edges)
         inv_map: Dict[Tuple[str, str, str], int] = {v: k for k, v in res_index.items()}
-        edge_list1 = [(inv_map[r1], inv_map[r2], d) for (r1, r2, d) in saltbridge_i_edges]
-        edge_list2 = [(inv_map[r1], inv_map[r2], d) for (r1, r2, d) in saltbridge_h_edges]
+
+        # Split canonical edges back into ionic and hbond lists
+        canonical_saltbridge_i_edges = canonical_combined_edges[: len(saltbridge_i_edges)]
+        canonical_saltbridge_h_edges = canonical_combined_edges[len(saltbridge_i_edges) :]
+
+        edge_list1 = [(inv_map[r1], inv_map[r2], d) for (r1, r2, d) in canonical_saltbridge_i_edges]
+        edge_list2 = [(inv_map[r1], inv_map[r2], d) for (r1, r2, d) in canonical_saltbridge_h_edges]
 
         if verbose:
             logger.debug("--- SALT BRIDGE (residue) ionic edges ---\n%s", edge_list1)
             logger.debug("--- SALT BRIDGE (residue) hbond edges ---\n%s", edge_list2)
 
-        return [res_index, res_index], [edge_list1, edge_list2], [saltbridge_i_edges, saltbridge_h_edges]
+        return (
+            [res_index, res_index],
+            [edge_list1, edge_list2],
+            [canonical_saltbridge_i_edges, canonical_saltbridge_h_edges],
+        )
 
     # Atom-level fallback: use previous matching by residue number fields at [5]
     def match_amino_acid_tuples(list1, list2):
@@ -405,11 +324,28 @@ def s_mode(ionic_edges: List[Any], hbond_edges: List[Any], verbose: bool = False
     atom_index1, edge_list1 = convert_to_indexed_edge_list(saltbridge_i_edges)
     atom_index2, edge_list2 = convert_to_indexed_edge_list(saltbridge_h_edges)
 
-    if verbose:
-        logger.debug("--- SALT BRIDGE ionic edges ---\n%s", edge_list1)
-        logger.debug("--- SALT BRIDGE hbond edges ---\n%s", edge_list2)
+    # Augment edge lists with distances
+    inv_map1: Dict[Tuple, int] = {tuple(atom): idx for idx, atom in atom_index1.items()}
+    edge_list1_with_d = []
+    for a1, a2 in saltbridge_i_edges:
+        i = inv_map1[tuple(a1)]
+        j = inv_map1[tuple(a2)]
+        d = distance.euclidean_distance(a1, a2)
+        edge_list1_with_d.append((i, j, d))
 
-    return [atom_index1, atom_index2], [edge_list1, edge_list2], [saltbridge_i_edges, saltbridge_h_edges]
+    inv_map2: Dict[Tuple, int] = {tuple(atom): idx for idx, atom in atom_index2.items()}
+    edge_list2_with_d = []
+    for a1, a2 in saltbridge_h_edges:
+        i = inv_map2[tuple(a1)]
+        j = inv_map2[tuple(a2)]
+        d = distance.euclidean_distance(a1, a2)
+        edge_list2_with_d.append((i, j, d))
+
+    if verbose:
+        logger.debug("--- SALT BRIDGE ionic edges (with distances) ---\n%s", edge_list1_with_d)
+        logger.debug("--- SALT BRIDGE hbond edges (with distances) ---\n%s", edge_list2_with_d)
+
+    return [atom_index1, atom_index2], [edge_list1_with_d, edge_list2_with_d], [saltbridge_i_edges, saltbridge_h_edges]
 
 
 def cov_mode(
@@ -465,13 +401,6 @@ def cov_mode(
     _add_residue_atoms(PDB_data[1])
 
     # Distance between two consecutive residues: use C(i)–N(i+1) peptide bond distance
-    from math import sqrt as _sqrt
-
-    def _centroid_of(atoms: List[List[str]]) -> Tuple[float, float, float]:
-        xs = [float(a[6]) for a in atoms]
-        ys = [float(a[7]) for a in atoms]
-        zs = [float(a[8]) for a in atoms]
-        return sum(xs) / len(xs), sum(ys) / len(ys), sum(zs) / len(zs)
 
     def _atom_coord(atoms: List[List[str]], atom_name: str) -> Optional[Tuple[float, float, float]]:
         for a in atoms:
@@ -489,22 +418,36 @@ def cov_mode(
             dx = c_coord[0] - n_coord[0]
             dy = c_coord[1] - n_coord[1]
             dz = c_coord[2] - n_coord[2]
-            return _sqrt(dx * dx + dy * dy + dz * dz)
+            return sqrt(dx * dx + dy * dy + dz * dz)
         # Fallbacks if specific atoms are missing
         ca1 = _atom_coord(a_list, "CA")
         ca2 = _atom_coord(b_list, "CA")
         if ca1 is not None and ca2 is not None:
-            return _sqrt((ca1[0] - ca2[0]) ** 2 + (ca1[1] - ca2[1]) ** 2 + (ca1[2] - ca2[2]) ** 2)
-        c1 = _centroid_of(a_list)
-        c2 = _centroid_of(b_list)
-        return _sqrt((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2 + (c1[2] - c2[2]) ** 2)
+            return sqrt((ca1[0] - ca2[0]) ** 2 + (ca1[1] - ca2[1]) ** 2 + (ca1[2] - ca2[2]) ** 2)
+        c1 = centroid_of(a_list)
+        c2 = centroid_of(b_list)
+        return sqrt((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2 + (c1[2] - c2[2]) ** 2)
 
     # Sort residues within each chain by residue sequence (as integer if possible)
     def _seq_num(rk):
+        """Return a tuple (base_number, suffix) for proper sorting of residue numbers.
+        Handles both integer (100) and string (100a, 100b) sequence numbers.
+        """
+        seq_str = str(rk[1]).strip()
         try:
-            return int(str(rk[1]).strip())
-        except Exception:
-            return str(rk[1]).strip()
+            # Try to parse as pure integer
+            return (int(seq_str), "")
+        except ValueError:
+            # Try to extract base number and suffix (e.g., "100a" -> (100, "a"))
+            import re
+
+            match = re.match(r"^(\d+)(.*)$", seq_str)
+            if match:
+                base_num = int(match.group(1))
+                suffix = match.group(2) if match.group(2) else ""
+                return (base_num, suffix)
+            # Fallback: treat as string with empty base number
+            return (0, seq_str)
 
     residue_edges: List[Tuple[Tuple[str, str, str], Tuple[str, str, str], float]] = []
     for chain, res_set in by_chain.items():
@@ -586,40 +529,75 @@ def h_mode(
         return atom_index, edge_list, hbond_edges
 
     # residue-level: aggregate bonds by residue pair, distance from actual donor/acceptor atoms
-    from math import sqrt
+    # IMPORTANT: HBondFinder output doesn't include insertion codes in residue numbers,
+    # so we need to match atoms back to original PDB data to get correct residue keys
+    from src.utils.residue_handler import normalize_resseq
 
     def euclid_from_atoms(a1: List[str], a2: List[str]) -> float:
         x1, y1, z1 = float(a1[6]), float(a1[7]), float(a1[8])
         x2, y2, z2 = float(a2[6]), float(a2[7]), float(a2[8])
         return sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2)
 
+    # Build mapping from HBondFinder atoms to original PDB atoms to preserve insertion codes
+    # Match by chain, residue number (normalized), residue name, atom name, and coordinates
+    def find_original_atom(hb_atom: List[str], pdb_data: List[Any]) -> Optional[List[str]]:
+        """Find the original atom in PDB data that matches the HBondFinder atom."""
+        hb_chain = hb_atom[4].strip()
+        hb_resseq = hb_atom[5].strip()
+        hb_resname = hb_atom[3].strip()
+        hb_atomname = hb_atom[2].strip()
+        hb_x, hb_y, hb_z = float(hb_atom[6]), float(hb_atom[7]), float(hb_atom[8])
+
+        # Normalize residue number to match without insertion code
+        norm_resseq = normalize_resseq(hb_resseq)
+
+        for entity in pdb_data:
+            for orig_atom in entity:
+                orig_chain = orig_atom[4].strip()
+                orig_resseq = orig_atom[5].strip()
+                orig_resname = orig_atom[3].strip()
+                orig_atomname = orig_atom[2].strip() if len(orig_atom) > 2 else ""
+                orig_x, orig_y, orig_z = float(orig_atom[6]), float(orig_atom[7]), float(orig_atom[8])
+
+                # Match by chain, normalized residue number, residue name, atom name, and coordinates
+                if (
+                    orig_chain == hb_chain
+                    and normalize_resseq(orig_resseq) == norm_resseq
+                    and orig_resname == hb_resname
+                    and orig_atomname == hb_atomname
+                    and abs(orig_x - hb_x) < 0.01
+                    and abs(orig_y - hb_y) < 0.01
+                    and abs(orig_z - hb_z) < 0.01
+                ):
+                    return orig_atom
+        return None
+
     grouped: Dict[Tuple[Tuple[str, str, str], Tuple[str, str, str]], List[Tuple[List[str], List[str]]]] = {}
     for a1, a2 in hbond_edges:
-        k = (_residue_key(a1), _residue_key(a2))
-        grouped.setdefault(k, []).append((a1, a2))
+        # Match HBondFinder atoms back to original PDB atoms to get correct residue keys with insertion codes
+        orig_a1 = find_original_atom(a1, PDB_data)
+        orig_a2 = find_original_atom(a2, PDB_data)
+
+        if orig_a1 and orig_a2:
+            # Use residue_key on original atoms to preserve insertion codes
+            k = (residue_key(orig_a1), residue_key(orig_a2))
+            grouped.setdefault(k, []).append((orig_a1, orig_a2))
+        else:
+            # Fallback: use HBondFinder atoms (may not have insertion codes)
+            k = (residue_key(a1), residue_key(a2))
+            grouped.setdefault(k, []).append((a1, a2))
 
     residue_edges: List[Tuple[Tuple[str, str, str], Tuple[str, str, str], float]] = []
     for (r1, r2), pairs in grouped.items():
         dmin = min(euclid_from_atoms(a1, a2) for (a1, a2) in pairs)
         residue_edges.append((r1, r2, dmin))
 
-    res_index: Dict[int, Tuple[str, str, str]] = {}
-    inv_map: Dict[Tuple[str, str, str], int] = {}
-    current = 0
-    for r1, r2, _ in residue_edges:
-        if r1 not in inv_map:
-            inv_map[r1] = current
-            res_index[current] = r1
-            current += 1
-        if r2 not in inv_map:
-            inv_map[r2] = current
-            res_index[current] = r2
-            current += 1
-    edge_list_with_d = [(inv_map[r1], inv_map[r2], d) for (r1, r2, d) in residue_edges]
+    # index residues - include ALL variants (100, 100a, 100b) as separate nodes
+    res_index, edge_list_with_d, canonical_residue_edges = build_residue_index(residue_edges)
 
     if verbose:
         logger.debug("--- H-BOND residue edges (min atom distance) ---\n%s", edge_list_with_d)
-    return res_index, edge_list_with_d, residue_edges
+    return res_index, edge_list_with_d, canonical_residue_edges
 
 
 def handle_hbond_processing(
@@ -678,43 +656,9 @@ def handle_hbond_processing(
     return output_dir / "HbondFinder_output.txt", output_dir / "hbonds_list.txt"
 
 
-def handle_interchain_hbond_processing(file: str) -> Optional[str]:
-    """
-    Legacy: run HBondFinder on a single PDB file and move outputs.
-
-    Args:
-        file (str): Path to a PDB file.
-
-    Returns:
-        str: Name of the HBondFinder output file, or None if failed.
-    """
-    try:
-        shutil.copyfile(file, "./temp.pdb")
-    except OSError:
-        logger.error("File not found: %s", file)
-        return None
-
-    if not hbondfinder_handler.run_hbondfinder("temp.pdb"):
-        os.remove("temp.pdb")
-        return None
-
-    hb_file_name = f"{file.split('.')[-2].split('\\')[-1]}.txt"
-    try:
-        os.rename("HBondFinder_temp.txt", f"HBondFinder{hb_file_name}")
-        shutil.move(f"HBondFinder{hb_file_name}", "hbondfinder_data")
-        os.rename("hbonds_temp.txt", f"hbonds{hb_file_name}")
-        shutil.move(f"hbonds{hb_file_name}", "hbondfinder_data")
-    except OSError:
-        logger.error("Could not move HBondFinder outputs to hbondfinder_data.")
-    finally:
-        os.remove("temp.pdb")
-
-    return f"HBondFinder{hb_file_name}"
-
-
 def compute_intra_contact_edges(
     pdb_data: List[Any],
-    contact_index: Dict[int, List[Any]] | Dict[int, Tuple[str, str, str]],
+    contact_index: Union[Dict[int, List[Any]], Dict[int, Tuple[str, str, str]]],
     contact_raw: List[Any],
     max_distance: float,
     node_level: str,
@@ -773,37 +717,31 @@ def compute_intra_contact_edges(
         return intra_edges
 
     # residue-level
-    def _normalize_res_key(rk: Tuple[str, str, str]) -> Tuple[str, str, str]:
-        return (str(rk[0]).strip(), str(rk[1]).strip(), str(rk[2]).strip())
+    # Use the same approach as contact edges: work directly with residue keys from contact_index
+    # which already have insertion codes preserved (via build_residue_index)
 
+    # Build a mapping from residue keys to indices using the original keys from contact_index
+    # This ensures insertion codes are preserved exactly as they appear in contact_index
+    inv_idx: Dict[Tuple[str, str, str], int] = {}
+    for idx, res_key in contact_index.items():
+        # res_key is already a tuple (chain, resSeq, resName) with insertion codes
+        # Use it directly without normalization to preserve insertion codes
+        inv_idx[res_key] = idx
+
+    # Collect all residue keys that appear in contact_raw (these already have insertion codes)
     union_res: set = set()
     for r1, r2, _ in contact_raw:
-        union_res.add(_normalize_res_key(r1))
-        union_res.add(_normalize_res_key(r2))
+        # contact_raw contains residue keys with insertion codes from build_residue_index
+        union_res.add(r1)
+        union_res.add(r2)
 
-    def _build_residue_atoms(points: List[List[str]]):
-        by_res: Dict[Tuple[str, str, str], List[List[str]]] = {}
-        for a in points:
-            key = _normalize_res_key((a[4], a[5], a[3]))
-            by_res.setdefault(key, []).append(a)
-        return by_res
-
+    # Build residue atoms mapping using residue_key which preserves insertion codes
     res_atoms: Dict[Tuple[str, str, str], List[List[str]]] = {}
-    res_atoms.update(_build_residue_atoms(pdb_data[0]))
-    res_atoms.update(_build_residue_atoms(pdb_data[1]))
-
-    inv_idx: Dict[Tuple[str, str, str], int] = {}
-    for k, v in contact_index.items():
-        norm_key = _normalize_res_key(v)
-        inv_idx[norm_key] = k
-
-    from math import sqrt as _sqrt2
-
-    def _centroid_of2(atoms: List[List[str]]):
-        xs = [float(a[6]) for a in atoms]
-        ys = [float(a[7]) for a in atoms]
-        zs = [float(a[8]) for a in atoms]
-        return sum(xs) / len(xs), sum(ys) / len(ys), sum(zs) / len(zs)
+    for entity in pdb_data:
+        for a in entity:
+            # residue_key extracts (chain, resSeq, resName) where resSeq includes insertion codes
+            key = residue_key(a)
+            res_atoms.setdefault(key, []).append(a)
 
     def _residue_distance(a_list: List[List[str]], b_list: List[List[str]]):
         if contact_distance_strategy == "avg-atom":
@@ -812,11 +750,11 @@ def compute_intra_contact_edges(
                 x1, y1, z1 = float(a1[6]), float(a1[7]), float(a1[8])
                 for a2 in b_list:
                     x2, y2, z2 = float(a2[6]), float(a2[7]), float(a2[8])
-                    vals.append(_sqrt2((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2))
+                    vals.append(sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2))
             return (sum(vals) / len(vals)) if vals else 0.0
-        c1 = _centroid_of2(a_list)
-        c2 = _centroid_of2(b_list)
-        return _sqrt2((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2 + (c1[2] - c2[2]) ** 2)
+        c1 = centroid_of(a_list)
+        c2 = centroid_of(b_list)
+        return sqrt((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2 + (c1[2] - c2[2]) ** 2)
 
     by_chain: Dict[str, List[Tuple[str, str, str]]] = {}
     for rk in union_res:
@@ -827,14 +765,17 @@ def compute_intra_contact_edges(
         keys_sorted = sorted(keys)
         for i in range(len(keys_sorted)):
             for j in range(i + 1, len(keys_sorted)):
-                a_list = res_atoms.get(keys_sorted[i])
-                b_list = res_atoms.get(keys_sorted[j])
+                rk1 = keys_sorted[i]
+                rk2 = keys_sorted[j]
+                a_list = res_atoms.get(rk1)
+                b_list = res_atoms.get(rk2)
                 if not a_list or not b_list:
                     continue
                 d = _residue_distance(a_list, b_list)
                 if d < max_distance:
-                    ii = inv_idx.get(keys_sorted[i])
-                    jj = inv_idx.get(keys_sorted[j])
+                    # Look up indices using original residue keys (with insertion codes)
+                    ii = inv_idx.get(rk1)
+                    jj = inv_idx.get(rk2)
                     if ii is not None and jj is not None:
                         intra_edges.append((ii, jj, d))
 

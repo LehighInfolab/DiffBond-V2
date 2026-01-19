@@ -11,7 +11,7 @@ import os
 import logging
 import subprocess
 from pathlib import Path
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ def get_project_root() -> Path:
     return Path(__file__).parent.parent.parent
 
 
-def run_hbondfinder(file: Path | str) -> bool:
+def run_hbondfinder(file: Union[Path, str]) -> bool:
     """Run HBondFinder on an input PDB file.
 
     Uses acceptors_donors_dict.json as mapping for amino acids to acceptor/donor atoms.
@@ -47,7 +47,7 @@ def run_hbondfinder(file: Path | str) -> bool:
         subprocess.CalledProcessError: If HBondFinder execution fails
         FileNotFoundError: If required files are not found
     """
-    file = Path(file) if isinstance(file, str) else file
+    file = Path(file) if isinstance(file, (str, Path)) else Path(file)
 
     if not file.exists():
         raise FileNotFoundError(f"Input PDB file not found: {file}")

@@ -22,20 +22,27 @@ from pathlib import Path
 import argparse
 import itertools
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 
 import src.utils.logging_handler as logging_handler
+
+# Initialize logging as early as possible to ensure any logs emitted during
+# subsequent imports use the configured handlers (prevents Unicode errors on Windows)
+# Use a special flag to indicate this is initial setup - don't create file handlers yet
+# File handlers will be created in main() when log file paths are known
+logging_handler.setup_logging(create_file_handlers=False)
+
 import src.utils.graph_handler as graph_handler
 import src.utils.file_handler as file_handler
 import src.utils.mutation_handler as mutation_handler
 
 import src.core.interactions as interactions
-from src.core.interactions import _residue_key
+from src.utils.residue_handler import residue_key
 from src.utils.constants import MOLECULAR_MEASUREMENTS
 import src.core.hbondfinder_handler as hbondfinder_handler
 
-logging_handler.setup_logging()
 logger = logging.getLogger(__name__)
+failure_logger = logging.getLogger("failures")
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -63,8 +70,9 @@ def parse_arguments() -> argparse.Namespace:
         "-m",
         "--mode",
         required=True,
-        help="Interaction types to analyze, e.g. 'c,i,h,s,p,b' "
-        "(c=contact, i=ionic, h=hydrogen, s=salt bridge, p=cation-π [cylinder-based], b=covalent-backbone)",
+        help="Interaction types to analyze, e.g. 'c,i,h,s,p,b,n,m' "
+        "(c=contact, i=ionic, h=hydrogen, s=salt bridge, p=cation-π [cylinder-based], "
+        "b=covalent-backbone, n=intramolecular contact, m=mutant edges)",
     )
 
     # Node granularity: atom-level (default) or residue-level nodes
@@ -155,7 +163,7 @@ def parse_arguments() -> argparse.Namespace:
     raw = args.mode.replace(" ", "").lower()
     modes = [m for m in raw.split(",") if m]
 
-    valid = {"c", "i", "h", "s", "p", "b"}
+    valid = {"c", "i", "h", "s", "p", "b", "n", "m"}
     invalid = set(modes) - valid
     if invalid:
         raise SystemExit(f"Invalid mode(s): {sorted(invalid)}. " f"Valid: {sorted(valid)}")
@@ -260,8 +268,8 @@ def analyze_interactions(
             if len(first) == 2 and isinstance(first[0], (list, tuple)) and len(first[0]) > 6:
                 # atom-level pairs
                 for a1, a2 in c_raw:
-                    allowed_residue_keys.add(_residue_key(a1))
-                    allowed_residue_keys.add(_residue_key(a2))
+                    allowed_residue_keys.add(residue_key(a1))
+                    allowed_residue_keys.add(residue_key(a2))
             elif len(first) == 3 and isinstance(first[0], (list, tuple)):
                 # residue-level triples (r1, r2, d)
                 for r1, r2, _d in c_raw:
@@ -330,6 +338,9 @@ def analyze_interactions(
 def main():
     args = parse_arguments()
 
+    # Reconfigure logging (always uses logs/diffbond_all.log and logs/diffbond_failures.log)
+    logging_handler.setup_logging(verbose=args.verbose)
+
     # Determine output folder name (user-specified or generated)
     output_name = args.output or file_handler.generate_output_name(
         args.input, args.distance, MOLECULAR_MEASUREMENTS["default_max_distance"]
@@ -351,7 +362,7 @@ def main():
     try:
         pdb_data_list = process_pdb_data(args.input)
     except ValueError as e:
-        logger.error("Error processing PDB data: %s", e)
+        failure_logger.error("Error processing PDB data: %s", e)
         return
 
     # Analyze each dataset (each chain-pair or PDB-pair)
@@ -383,102 +394,130 @@ def main():
             graph_handler.write_graphs_from_edge_dict(edge_dict, results_dir)
             logger.info("Finished writing graph files")
 
-        # Write intramolecular contacts constrained to nodes present in contact edges
-        if "contact" in edge_dict:
-            try:
-                c_idx, _c_edges_with_d, c_raw = edge_dict["contact"]
-                out_dir = Path("Results") / output_name
-                intra_edges = interactions.compute_intra_contact_edges(
-                    pdb_data=pdb_data,
-                    contact_index=c_idx,
-                    contact_raw=c_raw,
-                    max_distance=args.distance,
-                    node_level=args.node_level,
-                    contact_distance_strategy=args.contact_distance,
+        # Write intramolecular contacts constrained to nodes present in contact edges (mode "n")
+        if "n" in args.mode:
+            if "contact" not in edge_dict:
+                failure_logger.warning(
+                    "Intramolecular contact mode (n) requires contact mode (c). "
+                    "Skipping intramolecular contact calculation."
                 )
-                out_file = graph_handler.write_intra_contact_edges(
-                    intra_edges, c_idx, out_dir, "intracontact_edges.txt"
-                )
-                if out_file is not None:
-                    logger.info("Wrote intramolecular contact edges: %s", out_file)
-            except Exception as _e:
-                logger.exception(
-                    "Failed computing intramolecular contacts within contact nodes: %s",
-                    _e,
-                )
-
-        # If SKEMPI CSV info is provided, compute mutant->ALL residue nodes distances (residue level)
-        if args.skempi_csv and args.row_index is not None:
-            try:
-                # Recompute contact edges at residue level to get residue keys
-                _, _, res_residue_edges = interactions.c_mode(
-                    pdb_data,
-                    args.distance,
-                    verbose=False,
-                    node_level="residue",
-                    contact_distance_strategy=args.contact_distance,
-                )
-
-                # Read mutation specifications from SKEMPI CSV
-                mut_specs = mutation_handler.read_skempi_mutations(args.skempi_csv, args.row_index)
-
-                if not mut_specs:
-                    logger.warning(
-                        f"No mutation found in SKEMPI CSV at row_index={args.row_index}. "
-                        f"CSV file: {args.skempi_csv}. "
-                        f"Check if column 4 (index 3) contains a valid mutation token at that row."
+            else:
+                try:
+                    c_idx, _c_edges_with_d, c_raw = edge_dict["contact"]
+                    out_dir = Path("Results") / output_name
+                    intra_edges = interactions.compute_intra_contact_edges(
+                        pdb_data=pdb_data,
+                        contact_index=c_idx,
+                        contact_raw=c_raw,
+                        max_distance=args.distance,
+                        node_level=args.node_level,
+                        contact_distance_strategy=args.contact_distance,
                     )
-                else:
-                    # Collect all residue keys from interaction outputs
-                    union_residue_keys = mutation_handler.collect_residue_keys_from_edge_dict(
-                        edge_dict, res_residue_edges
+                    out_file = graph_handler.write_intra_contact_edges(
+                        intra_edges, c_idx, out_dir, "intracontact_edges.txt"
+                    )
+                    if out_file is not None:
+                        logger.info("Wrote intramolecular contact edges: %s", out_file)
+                except Exception as _e:
+                    failure_logger.exception(
+                        "Failed computing intramolecular contacts within contact nodes: %s",
+                        _e,
                     )
 
-                    if not union_residue_keys:
-                        logger.warning(
-                            f"No residue keys found in interaction outputs. "
-                            f"Cannot compute mutant distances. "
-                            f"Interactions computed: {list(edge_dict.keys())}"
+        # Compute mutant->ALL residue nodes distances (residue level) if mode "m" is enabled
+        if "m" in args.mode:
+            if not args.skempi_csv or args.row_index is None:
+                failure_logger.warning(
+                    "Mutant edge mode (m) requires --skempi-csv and --row-index arguments. "
+                    "Skipping mutant edge calculation."
+                )
+            else:
+                try:
+                    # Try to reuse contact edges if already computed at residue level
+                    res_residue_edges = None
+                    if "contact" in edge_dict:
+                        c_idx, c_list, c_raw = edge_dict["contact"]
+                        # Check if contact edges are already in residue-level format
+                        if c_raw and isinstance(c_raw[0], (list, tuple)) and len(c_raw[0]) == 3:
+                            # Check if first element is a residue key (3-tuple of strings)
+                            first = c_raw[0]
+                            if isinstance(first[0], (list, tuple)) and len(first[0]) == 3:
+                                if all(isinstance(x, str) for x in first[0]):
+                                    # Already residue-level format, reuse it
+                                    res_residue_edges = c_raw
+                                    logger.debug("Reusing existing residue-level contact edges for mutation mode")
+
+                    # If not available or not residue-level, compute at residue level
+                    if res_residue_edges is None:
+                        _, _, res_residue_edges = interactions.c_mode(
+                            pdb_data,
+                            args.distance,
+                            verbose=False,
+                            node_level="residue",
+                            contact_distance_strategy=args.contact_distance,
+                        )
+
+                    # Read mutation specifications from SKEMPI CSV
+                    mut_specs = mutation_handler.read_skempi_mutations(args.skempi_csv, args.row_index)
+
+                    if not mut_specs:
+                        failure_logger.warning(
+                            f"No mutation found in SKEMPI CSV at row_index={args.row_index}. "
+                            f"CSV file: {args.skempi_csv}. "
+                            f"Check if column 4 (index 3) contains a valid mutation token at that row."
                         )
                     else:
-                        # Compute distances from mutants to all residue nodes
-                        mut_index_map, mut_edges = mutation_handler.compute_mutant_distances(
-                            pdb_data,
-                            mut_specs,
-                            union_residue_keys,
-                            args.contact_distance,
+                        # Collect all residue keys from interaction outputs
+                        union_residue_keys = mutation_handler.collect_residue_keys_from_edge_dict(
+                            edge_dict, res_residue_edges
                         )
 
-                        # Write indexed edge graph in same format as other interactions
-                        if mut_edges:
-                            out_dir = Path("Results") / output_name
-                            out_dir.mkdir(parents=True, exist_ok=True)
-                            try:
-                                graph_handler.write_index_edge_mapping(
-                                    index=mut_index_map,
-                                    edges=mut_edges,
-                                    name="mutant",
-                                    output_dir=out_dir,
-                                )
-                                # Count unique mutation nodes (they have indices 0, 1, 2, ...)
-                                num_mutations = len(set(src for src, _, _ in mut_edges))
-                                logger.info(
-                                    f"Wrote mutant edge graph: {len(mut_edges)} edges "
-                                    f"from {num_mutations} mutant node(s) to {len(union_residue_keys)} residue nodes"
-                                )
-                            except Exception as e:
-                                logger.exception("Failed writing mutant edge graph: %s", e)
-                        else:
-                            logger.warning(
-                                f"No mutant edges computed. Mutation token(s): {mut_specs}. "
-                                f"Possible reasons: "
-                                f"(1) Mutation token format invalid (expected format like 'LI45G'), "
-                                f"(2) Mutant residue not found in PDB structure, "
-                                f"(3) No atoms found for mutant residue, or "
-                                f"(4) All target residues were filtered out."
+                        if not union_residue_keys:
+                            failure_logger.warning(
+                                f"No residue keys found in interaction outputs. "
+                                f"Cannot compute mutant distances. "
+                                f"Interactions computed: {list(edge_dict.keys())}"
                             )
-            except Exception as err:
-                logger.exception("Mutant distance computation failed: %s", err)
+                        else:
+                            # Compute distances from mutants to all residue nodes
+                            mut_index_map, mut_edges = mutation_handler.compute_mutant_distances(
+                                pdb_data,
+                                mut_specs,
+                                union_residue_keys,
+                                args.contact_distance,
+                            )
+
+                            # Write indexed edge graph in same format as other interactions
+                            if mut_edges:
+                                out_dir = Path("Results") / output_name
+                                out_dir.mkdir(parents=True, exist_ok=True)
+                                try:
+                                    graph_handler.write_index_edge_mapping(
+                                        index=mut_index_map,
+                                        edges=mut_edges,
+                                        name="mutant",
+                                        output_dir=out_dir,
+                                    )
+                                    # Count unique mutation nodes (they have indices 0, 1, 2, ...)
+                                    num_mutations = len(set(src for src, _, _ in mut_edges))
+                                    logger.info(
+                                        f"Wrote mutant edge graph: {len(mut_edges)} edges "
+                                        f"from {num_mutations} mutant node(s) to "
+                                        f"{len(union_residue_keys)} residue nodes"
+                                    )
+                                except Exception as e:
+                                    failure_logger.exception("Failed writing mutant edge graph: %s", e)
+                            else:
+                                failure_logger.warning(
+                                    f"No mutant edges computed. Mutation token(s): {mut_specs}. "
+                                    f"Possible reasons: "
+                                    f"(1) Mutation token format invalid (expected format like 'LI45G'), "
+                                    f"(2) Mutant residue not found in PDB structure, "
+                                    f"(3) No atoms found for mutant residue, or "
+                                    f"(4) All target residues were filtered out."
+                                )
+                except Exception as err:
+                    failure_logger.exception("Mutant distance computation failed: %s", err)
 
 
 if __name__ == "__main__":

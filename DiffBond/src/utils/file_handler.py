@@ -28,6 +28,13 @@ def parse_PDB_file(file: Union[str, Path]) -> List[List[str]]:
 
         all_lines = []
         for line in atom_lines:
+            # Extract residue sequence number (columns 22-25) and insertion code (column 26)
+            resseq_num = line[22:26].strip()  # Residue sequence number (right-justified, 4 chars)
+            insertion_code = line[26:27].strip() if len(line) > 26 else ""  # Insertion code (column 26)
+
+            # Combine residue number with insertion code if present (e.g., "60" + "B" -> "60B")
+            resseq = resseq_num + insertion_code.lower() if insertion_code else resseq_num
+
             parsed_line = [
                 line[0:6].strip(),  # Record name
                 line[6:11].strip(),  # Atom serial number
@@ -35,8 +42,7 @@ def parse_PDB_file(file: Union[str, Path]) -> List[List[str]]:
                 # line[16].strip(),  # Alternate location indicator
                 line[17:20].strip(),  # Residue name
                 line[21].strip(),  # Chain identifier
-                line[22:26].strip(),  # Residue sequence number
-                # line[26].strip(),  # Code for insertion of residues
+                resseq,  # Residue sequence number with insertion code (e.g., "60b")
                 line[30:38].strip(),  # x coordinate
                 line[38:46].strip(),  # y coordinate
                 line[46:54].strip(),  # z coordinate
@@ -70,17 +76,59 @@ def write_PDB(output_name: str, append: bool, atoms_list: List[List[str]]) -> No
     with open(output_name, mode) as f:
         for atom in atoms_list:
             # Format each field according to PDB specifications
-            record = atom[0].ljust(4)
-            atom_num = atom[1].rjust(5)
-            atom_name = atom[2].rjust(4)
-            res_name = atom[3][1:].ljust(3) if len(atom[3]) == 4 else atom[3].ljust(3)
-            chain = atom[4].rjust(1)
-            res_num = atom[5].rjust(4)
-            x = f"{float(atom[6]):8.3f}".rjust(8)
-            y = f"{float(atom[7]):8.3f}".rjust(8)
-            z = f"{float(atom[8]):8.3f}".rjust(8)
+            # PDB ATOM line format (columns):
+            # 0-5: Record name, 6-10: Atom serial, 12-15: Atom name, 17-19: Residue name
+            # 21: Chain, 22-25: Residue number, 26: Insertion code, 30-37: x, 38-45: y, 46-53: z
 
-            line = f"{record}  {atom_num} {atom_name} {res_name} {chain}{res_num}    {x}{y}{z}\n"
+            record = atom[0].ljust(6)  # "ATOM  " (6 chars)
+            atom_num = atom[1].rjust(5)  # Right-justified in columns 6-10
+            # Left-justified in columns 17-19
+            res_name = atom[3][1:].ljust(3) if len(atom[3]) == 4 else atom[3].ljust(3)
+            chain = atom[4] if atom[4] else " "  # Column 21 (1 char, space if empty)
+
+            # Handle residue number and insertion code
+            # atom[5] may contain combined residue number + insertion code (e.g., "60B", "100a")
+            resseq_str = str(atom[5]).strip()
+
+            # Check if last character is a letter (insertion code)
+            if resseq_str and resseq_str[-1].isalpha():
+                # Split residue number and insertion code
+                # Residue number (columns 22-25, right-justified)
+                res_num = resseq_str[:-1].rjust(4)
+                insertion_code = resseq_str[-1].upper()  # Insertion code (column 26, 1 char)
+            else:
+                # No insertion code - use space in column 26
+                # Residue number (columns 22-25, right-justified)
+                res_num = resseq_str.rjust(4)
+                insertion_code = " "  # Space in column 26 when no insertion code
+
+            # Format coordinates with 8.3f format (8 chars total, 3 decimal places)
+            x = f"{float(atom[6]):8.3f}"  # Columns 30-37
+            y = f"{float(atom[7]):8.3f}"  # Columns 38-45
+            z = f"{float(atom[8]):8.3f}"  # Columns 46-53
+
+            # Build PDB line with exact column positions
+            # PDB format: ATOM  serial name alt resname chain resseq icode    x      y      z
+            # Columns:    0-5   6-10  12-15 16  17-19   21   22-25  26   27-29 30-37 38-45 46-53
+            # Note: atom_name should be left-justified in columns 12-15, not right-justified
+            atom_name_formatted = atom[2].ljust(4)  # Left-justified in columns 12-15
+            line = (
+                f"{record}"  # 0-5: "ATOM  "
+                f"{atom_num}"  # 6-10: Atom serial (5 chars)
+                f" "  # 11: Space
+                f"{atom_name_formatted}"  # 12-15: Atom name (4 chars, left-justified)
+                f" "  # 16: Alternate location indicator (space)
+                f"{res_name}"  # 17-19: Residue name (3 chars)
+                f" "  # 20: Space
+                f"{chain}"  # 21: Chain identifier (1 char)
+                f"{res_num}"  # 22-25: Residue number (4 chars, right-justified)
+                f"{insertion_code}"  # 26: Insertion code (1 char)
+                f"   "  # 27-29: Three spaces
+                f"{x}"  # 30-37: x coordinate (8 chars)
+                f"{y}"  # 38-45: y coordinate (8 chars)
+                f"{z}"  # 46-53: z coordinate (8 chars)
+                f"\n"
+            )
             f.write(line)
 
 

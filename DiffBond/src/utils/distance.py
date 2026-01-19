@@ -6,6 +6,8 @@ Main functions:
 - find_cation_pi_interactions: Find interactions between aromatic rings and cations (distance-based)
 - find_cation_pi_interactions_cylinder: Find cation-π interactions using cylinder-based approach
 - find_nearby_contacts: Find atoms within specified distance of contact points
+- centroid_of: Calculate centroid of a list of atoms
+- residue_distance: Calculate distance between two residues
 """
 
 from typing import List, Tuple, Dict
@@ -20,6 +22,7 @@ from src.utils.constants import (
     CATIONIC_ATOMS,
     PDB_COORDINATE_INDICES as PDB_IDX,
 )
+from src.utils.residue_handler import residue_key, build_residue_atoms
 
 
 def euclidean_distance(point1: List[str], point2: List[str]) -> float:
@@ -150,11 +153,6 @@ def find_cation_pi_interactions(
     return results
 
 
-def _residue_key(atom: List[str]) -> Tuple[str, str, str]:
-    """Return a unique residue identifier (chain, resSeq, resName)."""
-    return atom[4], atom[5], atom[3]
-
-
 def _get_atom_coords(atom: List[str]) -> np.ndarray:
     """Extract coordinates from atom data."""
     return np.array(
@@ -258,16 +256,8 @@ def find_cation_pi_interactions_cylinder(
     """
 
     # Group atoms by residue
-    def _build_residue_atoms(points: List[List[str]]) -> Dict[Tuple[str, str, str], List[List[str]]]:
-        """Group atoms by residue key."""
-        by_res: Dict[Tuple[str, str, str], List[List[str]]] = {}
-        for atom in points:
-            key = _residue_key(atom)
-            by_res.setdefault(key, []).append(atom)
-        return by_res
-
-    res_atoms1 = _build_residue_atoms(points1)
-    res_atoms2 = _build_residue_atoms(points2)
+    res_atoms1 = build_residue_atoms(points1)
+    res_atoms2 = build_residue_atoms(points2)
 
     results = []
 
@@ -356,3 +346,48 @@ def find_cation_pi_interactions_cylinder(
                     results.append((ring_atoms[0], cation_atom))
 
     return results
+
+
+def centroid_of(atoms: List[List[str]]) -> Tuple[float, float, float]:
+    """Calculate centroid of a list of atoms.
+
+    Args:
+        atoms: List of atom data (PDB format)
+
+    Returns:
+        Tuple of (x, y, z) coordinates
+    """
+    xs = [float(a[6]) for a in atoms]
+    ys = [float(a[7]) for a in atoms]
+    zs = [float(a[8]) for a in atoms]
+    return sum(xs) / len(xs), sum(ys) / len(ys), sum(zs) / len(zs)
+
+
+def residue_distance(
+    mut_atoms: List[List[str]],
+    other_atoms: List[List[str]],
+    strategy: str = "avg-atom",
+) -> float:
+    """Calculate distance between two residues.
+
+    Args:
+        mut_atoms: Atoms of first residue
+        other_atoms: Atoms of second residue
+        strategy: 'avg-atom' for average atom-atom distance, 'centroid' for centroid distance
+
+    Returns:
+        Distance in Angstroms
+    """
+    if strategy == "avg-atom":
+        dvals = []
+        for a1 in mut_atoms:
+            x1, y1, z1 = float(a1[6]), float(a1[7]), float(a1[8])
+            for a2 in other_atoms:
+                x2, y2, z2 = float(a2[6]), float(a2[7]), float(a2[8])
+                dvals.append(math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2))
+        return (sum(dvals) / len(dvals)) if dvals else 0.0
+
+    # centroid strategy
+    c1 = centroid_of(mut_atoms)
+    c2 = centroid_of(other_atoms)
+    return math.sqrt((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2 + (c1[2] - c2[2]) ** 2)

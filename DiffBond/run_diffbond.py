@@ -1,3 +1,54 @@
+"""
+Run DiffBond calculations on SKEMPI dataset.
+
+Command-line Parameters:
+    --test N
+        Process only N samples from each bucket (wildtype and each base range).
+        Example: --test 3
+
+    --base-range START END
+        Process only base folders in the range [START, END) (0-indexed).
+        Example: --base-range 0 2 processes base-0 and base-1.
+        Cannot be used together with --row-range.
+
+    --row-range START END
+        Process only rows in the range [START, END) (exclusive end).
+        Example: --row-range 4739 5000 processes rows 4739-4999.
+        Cannot be used together with --base-range.
+
+    --skip-wt
+        Skip wildtype processing entirely.
+
+    --skip-mutant
+        Skip mutant distance calculation even when SKEMPI CSV is available.
+
+    --wt-pdb PDB [PDB ...]
+        Process only these wildtype PDB code(s).
+        Example: --wt-pdb 3UIH 4G0N or --wt-pdb 3UIH,4G0N
+
+Example Commands:
+    # Process all data (default: wildtype + all 8 bases)
+    python run_diffbond.py
+
+    # Process all bases but skip wildtype
+    python run_diffbond.py --skip-wt
+
+    # Test mode: process 3 samples from each bucket
+    python run_diffbond.py --test 3
+
+    # Process only the first 1000 samples (base-0 only)
+    python run_diffbond.py --base-range 0 1 --skip-wt
+
+    # Process exact row range: rows 4739 to 4999
+    python run_diffbond.py --row-range 4739 5000 --skip-wt
+
+    # Process only specific wildtype PDBs
+    python run_diffbond.py --wt-pdb 3UIH 4G0N
+
+    # Skip mutant distance calculation
+    python run_diffbond.py --skip-mutant
+"""
+
 import os
 from pathlib import Path
 import logging
@@ -5,28 +56,20 @@ import csv
 import argparse
 from tqdm import tqdm
 import subprocess
-import concurrent.futures
 
 
-def setup_logger(log_file="automation.log", level=logging.INFO):
-    """
-    Create/configure a dedicated logger for the automation script.
-    - Writes to ./automation.log
-    - Does NOT propagate to root (so it won't get mixed with DiffBond's logging)
-    - Safe to call multiple times (won't add duplicate handlers)
-    """
+def setup_logger(log_file="logs/run_diffbond.log", level=logging.INFO):
+    """Create/configure a dedicated logger for the automation script."""
     os.makedirs(os.path.dirname(log_file) or ".", exist_ok=True)
 
     logger = logging.getLogger("automation")
     logger.setLevel(level)
-    logger.propagate = False  # <- critical: keep it isolated from root/DiffBond
+    logger.propagate = False
 
     def _has_logfile_handler(handler):
         base_file = getattr(handler, "baseFilename", None)
-        return (
-            isinstance(handler, logging.FileHandler)
-            and base_file
-            and os.path.abspath(base_file) == os.path.abspath(log_file)
+        return isinstance(handler, logging.FileHandler) and (
+            base_file and os.path.abspath(base_file) == os.path.abspath(log_file)
         )
 
     if not any(_has_logfile_handler(h) for h in logger.handlers):
@@ -35,54 +78,50 @@ def setup_logger(log_file="automation.log", level=logging.INFO):
         fh.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s"))
         logger.addHandler(fh)
 
+    if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+        ch = logging.StreamHandler()
+        ch.setLevel(level)
+        ch.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+        logger.addHandler(ch)
+
     return logger
 
 
 logger = setup_logger()
 
 
-def make_output_dir(pdb, path):
-    try:
-        (Path("Results") / path / pdb).mkdir(exist_ok=True)
-    except Exception:
-        pass
-
-
 def parse_skempi():
-    # Make a skempi directory for current base
+    """Parse SKEMPI CSV and create output directory structure."""
     for i in range(8):
-        base_dir = Path("results") / f"base-{i}"
-        base_dir.mkdir(exist_ok=True)
-        logger.info(f"Making new base folder here: {base_dir}")
+        (Path("Results") / f"base-{i}").mkdir(parents=True, exist_ok=True)
 
-    # Open skempi csv file and start reading from base1 and split into folders from PDB and subfolders for index
     idx_pdb_dict = {}
     base_idx = 0
     current_pdb = ""
 
     with open("../../SKEMPI_dataset_download/skempi_v2.csv", "r") as csv_file:
         for index, row in enumerate(csv.reader(csv_file, delimiter=";")):
-            if index == 0:  # Skip header
+            if index == 0:
                 continue
 
             pdb = row[0].split("_")[0]
             if pdb != current_pdb:
                 current_pdb = pdb
-                make_output_dir(pdb, "base-" + str(base_idx))
+                (Path("Results") / f"base-{base_idx}" / pdb).mkdir(parents=True, exist_ok=True)
 
             if index % 1000 == 0:
                 base_idx += 1
-                make_output_dir(pdb, "base-" + str(base_idx))
+                (Path("Results") / f"base-{base_idx}" / pdb).mkdir(parents=True, exist_ok=True)
 
-            formatted_index = f"{(index):05d}"
-            (Path("results") / f"base-{base_idx}" / pdb / formatted_index).mkdir(exist_ok=True)
+            formatted_index = f"{index:05d}"
+            (Path("Results") / f"base-{base_idx}" / pdb / formatted_index).mkdir(parents=True, exist_ok=True)
             idx_pdb_dict[formatted_index] = f"base-{base_idx}/{pdb}/{formatted_index}"
 
     return idx_pdb_dict
 
 
-def calculate_diffbond(file1, file2, output, skempi_csv: str | None = None, row_index: int | None = None):
-    # command = ["python", "DiffBond_v2.py", "-i", file1, file2, "-m", "c", "i", "h" ,"s", "-g", "-o", output]
+def calculate_diffbond(file1, file2, output, skempi_csv=None, row_index=None, skip_mutant=False):
+    """Run DiffBond_v2.py as a subprocess."""
     command = [
         "python",
         "DiffBond_v2.py",
@@ -90,159 +129,140 @@ def calculate_diffbond(file1, file2, output, skempi_csv: str | None = None, row_
         file1,
         file2,
         "-m",
-        "p",
+        "c,i,h,s,p,b,m,n",
         "-g",
         "--node-level",
         "residue",
         "-o",
         output,
     ]
-    if skempi_csv is not None and row_index is not None:
+    if not skip_mutant and skempi_csv and row_index is not None:
         command.extend(["--skempi-csv", skempi_csv, "--row-index", str(row_index)])
-    result = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    print(result.stdout)
-
-
-def process_folder(folder, path, idx_pdb_dict, is_wt=False):
-    if os.path.isfile(path + "/" + folder):
-        logger.warning(f"{folder} is a file and not a directory.")
-        return
-
-    halfs = [d for d in os.listdir(path + "/" + folder) if d[0] == "H" and len(d) >= 4]
-
-    if len(halfs) != 2:
-        logger.error(f"{str(folder)} is missing pdb halfs.")
-        return
-
-    halfs.sort(reverse=False)
 
     try:
-        if is_wt:
-            pdb = folder.split("/")[-1]
-            file1 = f"{path}/{folder}/{halfs[0]}/hydrogensAdded.pdb"
-            file2 = f"{path}/{folder}/{halfs[1]}/hydrogensAdded.pdb"
-            output = f"wt/{pdb}"
-        else:
-            file1 = f"{path}/{folder}/{halfs[0]}/half1.pdb"
-            file2 = f"{path}/{folder}/{halfs[1]}/half2.pdb"
-            output = idx_pdb_dict[folder]
+        result = subprocess.run(
+            command,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+        )
+        if result.stdout:
+            print(result.stdout)
+    except subprocess.CalledProcessError as e:
+        error_msg = f"DiffBond_v2.py failed for {output}"
+        if e.stdout:
+            error_msg += f"\nSubprocess output:\n{e.stdout}"
+        logger.error(error_msg)
+        raise
 
-        # Derive row_index from folder name (e.g., '00001' -> 1) for SKEMPI CSV
-        row_index = None if is_wt else int(folder)
-        skempi_csv = None if is_wt else "datasets/MODIFIED-skempi_v2.csv"
 
-        calculate_diffbond(file1, file2, output, skempi_csv=skempi_csv, row_index=row_index)
-    except Exception as error:
-        logger.error("Error in calculating diffbond: %s", error)
+def process_folder(folder, path, idx_pdb_dict, is_wt=False, skip_mutant=False):
+    """Process a single folder by running DiffBond calculations."""
+    folder_path = Path(path) / folder
+    if not folder_path.is_dir():
+        logger.warning(f"{folder} is not a directory.")
+        return
+
+    halfs = sorted([d for d in os.listdir(folder_path) if d.startswith("H") and len(d) >= 4])
+    if len(halfs) != 2:
+        logger.error(f"{folder} is missing PDB halves.")
+        return
+
+    if is_wt:
+        pdb = folder.split("/")[-1]
+        file1 = folder_path / halfs[0] / "hydrogensAdded.pdb"
+        file2 = folder_path / halfs[1] / "hydrogensAdded.pdb"
+        output = f"wt/{pdb}"
+        skempi_csv = None
+        row_index = None
+    else:
+        file1 = folder_path / halfs[0] / "half1.pdb"
+        file2 = folder_path / halfs[1] / "half2.pdb"
+        output = idx_pdb_dict[folder]
+        skempi_csv = "datasets/MODIFIED-skempi_v2.csv"
+        row_index = int(folder)
+
+    calculate_diffbond(
+        str(file1),
+        str(file2),
+        output,
+        skempi_csv=skempi_csv,
+        row_index=row_index,
+        skip_mutant=skip_mutant,
+    )
 
 
-def _ordered_folders(path, start_from=None):
-    """Numeric folders sorted by value; non-numeric left in natural order.
-    start_from: int/str like '00325' filters numeric >= that value,
-                or a folder *name* to start from exactly.
-    """
+def _ordered_folders(path, start_from=None, end_at=None):
+    """Get folders sorted numerically, optionally filtered by range."""
     try:
         entries = [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
     except OSError as e:
         logger.error("Could not list directory '%s': %s", path, e, exc_info=True)
         return []
 
-    numeric = sorted([d for d in entries if d.isdigit()], key=lambda s: int(s))
-    non_numeric = [d for d in entries if not d.isdigit()]  # keep natural order
+    numeric = sorted([d for d in entries if d.isdigit()], key=int)
+    non_numeric = sorted([d for d in entries if not d.isdigit()])
+    ordered = numeric + non_numeric
 
-    if start_from is None:
-        return numeric + non_numeric
+    if start_from is not None:
+        start_int = int(start_from) if str(start_from).isdigit() else None
+        if start_int is not None:
+            ordered = [d for d in ordered if not d.isdigit() or int(d) >= start_int]
+        elif str(start_from) in ordered:
+            ordered = ordered[ordered.index(str(start_from)) :]
 
-    s = str(start_from)
-    if s.isdigit():
-        start_int = int(s)
-        numeric = [d for d in numeric if int(d) >= start_int]
-        return numeric + non_numeric
-    else:
-        ordered = numeric + non_numeric
-        if s in ordered:
-            return ordered[ordered.index(s) :]
-        logger.warning("start_from '%s' not found; processing all.", s)
-        return ordered
+    if end_at is not None and str(end_at).isdigit():
+        end_int = int(end_at)
+        ordered = [d for d in ordered if not d.isdigit() or int(d) < end_int]
+
+    return ordered
 
 
 def diffbond_calc(
     idx_pdb_dict,
     path,
     is_wt=False,
-    with_parallel=False,
     start_from=None,
+    end_at=None,
     test_samples_per_bucket=None,
+    skip_mutant=False,
+    wt_pdbs=None,
 ):
-    """
-    Process subfolders in `path` whose names are zero-padded digits like '00001'.
-    Folders are processed in ascending numeric order. Optionally start from a
-    particular folder number (int or str), inclusive.
-
-    Args:
-        idx_pdb_dict: ...
-        path (str): Root directory containing numbered subfolders (e.g., '00001').
-        is_wt (bool): Whether to use Results/wt output path.
-        with_parallel (bool): (kept for signature compatibility; non-parallel path here)
-        start_from (int | str | None): First folder number to process (inclusive).
-            Examples: 1, 325, "00001", "00325". If None, starts from the smallest.
-        test_samples_per_bucket (int | None): If set, only process this many samples per bucket.
-            Useful for testing with a small sample from each range.
-    """
+    """Process subfolders in path, running DiffBond calculations."""
     if is_wt:
-        try:
-            os.makedirs("Results/wt", exist_ok=True)
-            logger.info("Making new base folder here: Results/wt")
-        except OSError as error:
-            logger.error(error)
+        os.makedirs("Results/wt", exist_ok=True)
 
-    folders = _ordered_folders(path, start_from)
+    folders = _ordered_folders(path, start_from, end_at)
 
-    # Limit folders for test mode
-    if test_samples_per_bucket is not None and test_samples_per_bucket > 0:
+    if is_wt and wt_pdbs:
+        wanted = {p.upper() for p in wt_pdbs if p}
+        folders = [f for f in folders if f.upper() in wanted]
+        missing = sorted(wanted - {f.upper() for f in folders})
+        if missing:
+            logger.warning("Requested WT PDB(s) not found: %s", ", ".join(missing))
+        logger.info("Wildtype filter: %d folder(s) selected", len(folders))
+
+    if test_samples_per_bucket:
         original_count = len(folders)
         folders = folders[:test_samples_per_bucket]
-        logger.info(
-            f"TEST MODE: Processing {len(folders)} out of {original_count} folders "
-            f"from {'wildtype' if is_wt else path}"
-        )
-        logger.info(f"Selected folders for testing: {folders}")
+        logger.info(f"TEST MODE: Processing {len(folders)} out of {original_count} folders")
 
-    total_folders = len(folders)
-
-    if not with_parallel:
-        with tqdm(total=total_folders, desc="Processing folders") as progress_bar:
-            for folder in folders:
-                try:
-                    logger.info(
-                        "Processing folder:\n\t%s\n\t%s\n\tis_wt = %s",
-                        folder,
-                        path,
-                        is_wt,
-                    )
-                    process_folder(folder, path, idx_pdb_dict, is_wt)
-                except Exception as exc:
-                    logger.error("Error processing %s: %s", folder, exc, exc_info=True)
-                finally:
-                    progress_bar.update(1)
-
-    else:
-        with tqdm(total=total_folders, desc="Processing folders") as progress_bar:
-            with concurrent.futures.ProcessPoolExecutor() as executor:
-                futures = [executor.submit(process_folder, f, path, idx_pdb_dict, is_wt) for f in folders]
-                for future in concurrent.futures.as_completed(futures):
-                    try:
-                        future.result()
-                    except Exception as exc:
-                        logger.error("Generated an exception: %s", exc)
-                    finally:
-                        progress_bar.update(1)
+    with tqdm(total=len(folders), desc="Processing folders") as progress_bar:
+        for folder in folders:
+            try:
+                process_folder(folder, path, idx_pdb_dict, is_wt, skip_mutant=skip_mutant)
+            except Exception as exc:
+                logger.error("Error processing %s: %s", folder, exc, exc_info=True)
+            finally:
+                progress_bar.update(1)
 
 
 def parse_arguments():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Run DiffBond calculations on SKEMPI dataset with optional test mode.",
+        description="Run DiffBond calculations on SKEMPI dataset.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
@@ -250,8 +270,7 @@ def parse_arguments():
         "--test",
         type=int,
         metavar="N",
-        help="Test mode: process only N samples from each bucket (wildtype and each base range). "
-        "Useful for quick testing. Default: process all samples.",
+        help="Test mode: process only N samples from each bucket.",
     )
 
     parser.add_argument(
@@ -259,29 +278,31 @@ def parse_arguments():
         type=int,
         nargs=2,
         metavar=("START", "END"),
-        help="Process only base folders in the range [START, END) (0-indexed). "
-        "Example: --base-range 0 2 processes base-0 and base-1. Default: process all bases.",
+        help="Process only base folders in the range [START, END) (0-indexed).",
     )
 
     parser.add_argument(
-        "--skip-wt",
+        "--row-range",
+        type=int,
+        nargs=2,
+        metavar=("START", "END"),
+        help="Process only rows in the range [START, END) (exclusive end).",
+    )
+
+    parser.add_argument("--skip-wt", action="store_true", help="Skip wildtype processing.")
+
+    parser.add_argument(
+        "--wt-pdb",
+        type=str,
+        nargs="+",
+        metavar="PDB",
+        help="Process only these wildtype PDB code(s).",
+    )
+
+    parser.add_argument(
+        "--skip-mutant",
         action="store_true",
-        help="Skip wildtype processing.",
-    )
-
-    parser.add_argument(
-        "--wt-path",
-        type=str,
-        default="../../SKEMPI_dataset_download/wt",
-        help="Path to wildtype directory. Default: ../../SKEMPI_dataset_download/wt",
-    )
-
-    parser.add_argument(
-        "--base-path-template",
-        type=str,
-        default="../../MT_Processing_Archive/base-{i}",
-        help="Template for base folder paths. Use {i} as placeholder for base number. "
-        "Default: ../../MT_Processing_Archive/base-{i}",
+        help="Skip mutant distance calculation.",
     )
 
     return parser.parse_args()
@@ -289,86 +310,71 @@ def parse_arguments():
 
 def main():
     args = parse_arguments()
+
+    WT_PATH = "../../SKEMPI_dataset_download/WT_PPI_processing"
+    BASE_PATH_TEMPLATE = "../../MT_Processing_Archive/base-{i}"
+
     reader = parse_skempi()
 
-    test_samples = args.test
-    if test_samples:
-        logger.info("=" * 60 + "\n" f"TEST MODE ENABLED: Processing {test_samples} samples per bucket\n" "=" * 60)
+    wt_pdbs = None
+    if args.wt_pdb:
+        wt_pdbs = []
+        for token in args.wt_pdb:
+            wt_pdbs.extend([p.strip() for p in str(token).split(",") if p.strip()])
 
-    # Process wild type (if not skipped)
-    if not args.skip_wt:
-        wt_path = args.wt_path
-        logger.info(
-            "---------------------------------------------------------------\n"
-            f"Starting diffbond_calc on wildtype on path: {wt_path}\n"
-            "--------------------------------------------------------------- "
-        )
-        diffbond_calc(reader, wt_path, is_wt=True, test_samples_per_bucket=test_samples)
-        logger.info(
-            "---------------------------------------------------------------\n"
-            f"Finished diffbond_calc on wildtype on path: {wt_path}\n"
-            "--------------------------------------------------------------- "
-        )
-    else:
-        logger.info("Skipping wildtype processing (--skip-wt flag set)")
+    os.makedirs("logs", exist_ok=True)
+    logger.info("DiffBond instances will log to: logs/diffbond_all.log")
 
-    # Determine base range to process
-    if args.base_range:
-        base_start, base_end = args.base_range
-        if base_start < 0 or base_end <= base_start:
-            logger.error(f"Invalid base range: [{base_start}, {base_end})")
+    if args.test:
+        logger.info(f"TEST MODE ENABLED: Processing {args.test} samples per bucket")
+
+    if args.base_range and args.row_range:
+        logger.error("Cannot use --base-range and --row-range together.")
+        return
+
+    row_start, row_end = args.row_range if args.row_range else (None, None)
+    if args.row_range:
+        if row_start < 0 or row_end <= row_start:
+            logger.error(f"Invalid row range: [{row_start}, {row_end})")
             return
-        base_indices = range(base_start, base_end)
-        logger.info(f"Processing bases in range: {base_start} to {base_end - 1}")
+        logger.info(f"Processing rows in range: {row_start} to {row_end - 1}")
+
+    if not args.skip_wt:
+        logger.info(f"Starting diffbond_calc on wildtype: {WT_PATH}")
+        diffbond_calc(
+            reader,
+            WT_PATH,
+            is_wt=True,
+            start_from=row_start,
+            end_at=row_end,
+            test_samples_per_bucket=args.test,
+            skip_mutant=args.skip_mutant,
+            wt_pdbs=wt_pdbs,
+        )
+        logger.info("Finished diffbond_calc on wildtype")
+
+    if args.base_range:
+        if args.base_range[0] < 0 or args.base_range[1] <= args.base_range[0]:
+            logger.error(f"Invalid base range: [{args.base_range[0]}, {args.base_range[1]})")
+            return
+        base_indices = range(*args.base_range)
+        logger.info(f"Processing bases in range: {args.base_range[0]} to {args.base_range[1] - 1}")
     else:
-        # Default: process all bases (0-7)
         base_indices = range(8)
 
-    # Process base folders
     for i in base_indices:
-        base_path = args.base_path_template.format(i=i)
-        logger.info(
-            "---------------------------------------------------------------\n"
-            f"Starting diffbond_calc on base_path: {base_path}\n"
-            "--------------------------------------------------------------- "
+        base_path = BASE_PATH_TEMPLATE.format(i=i)
+        logger.info(f"Starting diffbond_calc on base_path: {base_path}")
+        diffbond_calc(
+            reader,
+            base_path,
+            start_from=row_start,
+            end_at=row_end,
+            test_samples_per_bucket=args.test,
+            skip_mutant=args.skip_mutant,
         )
-        diffbond_calc(reader, base_path, test_samples_per_bucket=test_samples)
-        logger.info(
-            "---------------------------------------------------------------\n"
-            f"Finished diffbond_calc on base_path: {base_path}\n"
-            "--------------------------------------------------------------- "
-        )
+        logger.info(f"Finished diffbond_calc on base_path: {base_path}")
 
 
 if __name__ == "__main__":
     main()
-
-# =====================================================================
-# EXAMPLE COMMANDS
-# =====================================================================
-
-# Process all data (default: wildtype + all 8 bases)
-# python run_diffbond.py
-
-# Process all bases but skip wildtype
-# python run_diffbond.py --skip-wt
-
-# Test mode: process 3 samples from each bucket (wildtype + base-0 through base-7)
-# python run_diffbond.py --test 3
-
-# Test mode skipping wildtype rtimojuhb b jgnvm n bm    im gay x100
-
-# python run_diffbond.py --test 10 --skip-wt
-
-# Process only the first 1000 samples (base-0 only, rows 1-1000)
-# python run_diffbond.py --base-range 0 1 --skip-wt
-
-# Process first 2000 samples (base-0 and base-1, rows 1-2000)
-# python run_diffbond.py --base-range 0 2 --skip-wt
-
-# Process a specific range: base-2 through base-5 (rows 2001-5000)
-# python run_diffbond.py --base-range 2 6 --skip-wt
-
-# Process only wildtype (skip all mutation bases)
-# Note: Currently there's no way to process ONLY wildtype without also processing bases.
-# The --skip-wt flag skips wildtype, not the bases.

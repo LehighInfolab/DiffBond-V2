@@ -12,10 +12,13 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 import pathlib as Path
+import logging
 
 # from networkx.algorithms import bipartite
 import matplotlib.pyplot as plt
 from typing import Dict, List, Tuple, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 
 def convert_to_indexed_edge_list(pdb_tuples: List[Tuple[List, List]]) -> Tuple[Dict[int, Tuple], List[Tuple[int, int]]]:
@@ -62,10 +65,19 @@ def write_index_edge_mapping(index: Optional[Dict], edges: Optional[List], name:
     if index is None or edges is None:
         with open(output_file_path, "w", encoding="utf-8") as f:
             f.write("")
+        logger.warning(f"Empty index or edges for {name}, wrote empty file: {output_file_path}")
         return
 
+    num_nodes = len(index)
+    num_edges = len(edges)
+
     # Convert data to DataFrames for easy CSV writing
-    nodes_df = pd.DataFrame(list(index.items()), columns=["Node", "Index"])
+    # index.items() returns (key, value) = (index, node)
+    # We want: Index (int) first, Node (tuple) second
+    # So we swap: create DataFrame with (value, key) = (node, index), then swap columns
+    nodes_df = pd.DataFrame([(node, idx) for idx, node in index.items()], columns=["Node", "Index"])
+    # Swap columns so Index comes first, then Node
+    nodes_df = nodes_df[["Index", "Node"]]
     # Allow optional third value (Distance) in edges
     if len(edges) > 0 and isinstance(edges[0], (list, tuple)) and len(edges[0]) == 3:
         edges_df = pd.DataFrame(edges, columns=["Source", "Target", "Distance"])
@@ -74,11 +86,13 @@ def write_index_edge_mapping(index: Optional[Dict], edges: Optional[List], name:
 
     try:
         with open(output_file_path, "w", encoding="utf-8") as f:
-            # f.write("# Node to Index Mapping\n")
+            # f.write("# Index to Node Mapping\n")
             nodes_df.to_csv(f, index=False)
             # f.write("\n# Edges\n")
             edges_df.to_csv(f, index=False)
+        logger.info(f"Wrote {name}_edges.txt: {num_nodes} nodes, {num_edges} edges -> {output_file_path}")
     except Exception as error:
+        logger.error(f"Failed to write {name}_edges.txt to {output_file_path}: {error}")
         raise error
 
 
@@ -89,9 +103,13 @@ def write_graphs_from_edge_dict(edge_dict: Dict[str, List[Any]], output_dir: Pat
     This helper writes one file per interaction using write_index_edge_mapping.
     """
     if not edge_dict:
+        logger.warning(f"No edge dictionary provided, nothing to write to {output_dir}")
         return
+
+    logger.info(f"Writing {len(edge_dict)} edge file(s) to {output_dir}")
     for edge_type, payload in edge_dict.items():
         if not isinstance(payload, (list, tuple)) or len(payload) < 2:
+            logger.warning(f"Skipping {edge_type}: invalid payload format")
             continue
         idx, elist = payload[0], payload[1]
         write_index_edge_mapping(idx, elist, edge_type, output_dir)
@@ -103,7 +121,7 @@ def write_intra_contact_edges(
     """Write precomputed intramolecular contact edge triplets to output_dir/filename.
 
     Writes nodes and edges in the same format as other graph files:
-    - Node section: Node,Index mapping
+    - Node section: Index,Node mapping
     - Edge section: Source,Target,Distance
 
     Args:
@@ -132,10 +150,16 @@ def write_intra_contact_edges(
 
         # Create filtered node index dictionary containing only nodes present in edges
         # Sort by index to ensure consistent ordering
+        # Use original keys from contact_index directly to preserve insertion codes
+        # (contact_index at residue level contains (chain, resSeq, resName) tuples where
+        # resSeq includes insertion codes like "27d", "100A")
         filtered_index = {idx: contact_index[idx] for idx in sorted(node_indices) if idx in contact_index}
 
         # Convert to DataFrame using same pattern as write_index_edge_mapping
-        nodes_df = pd.DataFrame(list(filtered_index.items()), columns=["Node", "Index"])
+        # Swap columns so Index comes first, then Node
+        # This preserves insertion codes in residue keys just like contact and ionic edges
+        nodes_df = pd.DataFrame([(node, idx) for idx, node in filtered_index.items()], columns=["Node", "Index"])
+        nodes_df = nodes_df[["Index", "Node"]]
         edges_df = pd.DataFrame(edges, columns=["Source", "Target", "Distance"])
 
         with open(out_file, "w", encoding="utf-8") as f:
